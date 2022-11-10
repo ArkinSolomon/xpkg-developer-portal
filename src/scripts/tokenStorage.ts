@@ -15,15 +15,14 @@
 
 /**
  * Check if we have a token in session storage or localstorage.
+ * 
+ * @return {string | null} The token if the token exists, or null if it doesn't exist.
  */
-export function checkAuth() {
+export function checkAuth(): string | null {
   let token = localStorage.getItem('token');
   if (!token)
     token = sessionStorage.getItem('token');
-  if (!token) {
-    sessionStorage.setItem('post-auth-redirect', window.location.href);
-    window.location.href = '/';
-  }
+  return token;
 }
 
 /**

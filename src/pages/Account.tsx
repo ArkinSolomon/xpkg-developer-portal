@@ -13,10 +13,25 @@
  * either express or implied limitations under the License.
  */
 
-function Account() {
-  return (
-    <p>Account</p>
-  );
+import { Component } from 'react';
+import * as tokenStorage from '../scripts/tokenStorage';
+
+class Account extends Component {
+  constructor(props: Record<string, never>) {
+    super(props);
+
+    const token = tokenStorage.checkAuth();
+    if (!token) {
+      sessionStorage.setItem('post-auth-redirect', '/account');
+      window.location.href = '/';
+    }   
+  }
+
+  render() {
+    return (
+      <p>Account</p>
+    );
+  }
 }
 
 export default Account;

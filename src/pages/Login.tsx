@@ -39,19 +39,7 @@ type LoginValues = {
   rememberMe: boolean;
 }
 
-/**
- * Error object used to keep track of errors for each field.
- * 
- * @typedef {Object } LoginErrors
- * @property {string} email Any issue with the email input.
- * @property {string} password Any issue with the password input.
- */
-type LoginErrors = {
-  email: string;
-  password: string;
-}
-
-import { Component, FormEvent } from 'react';
+import { Component } from 'react';
 import { Formik, FormikErrors } from 'formik';
 import AuthBox from '../components/AuthBox';
 import InputField from '../components/InputField';
@@ -72,15 +60,21 @@ class Login extends Component {
     } as LoginState;
 
     this.validate = this.validate.bind(this);
+
+    const token = tokenStorage.checkAuth();
+    if (token)
+      window.location.href = '/packages';
   }
 
-  validate({ email, password }: LoginValues):FormikErrors<LoginValues> {
+  validate({ email, password }: LoginValues): FormikErrors<LoginValues> {
     let invalidForm = false;
     invalidForm = !util.validateEmail(email) || !util.validatePassword(password);
     this.setState({
       errorMessage: '',
       invalidForm
     } as LoginState);
+
+    // We handle errors on our own, so we just don't return anything
     return {};
   }
 
@@ -105,26 +99,30 @@ class Login extends Component {
               setSubmitting(false);
               if (err)
                 return console.error(err);
+              
               const resp = r as XMLHttpRequest;
+
               if (resp.status !== 200) {
                 let message = 'An unknown error occured';
-                switch (resp.status) {
-                case 400:
-                  message = 'Bad request';
-                  break;
-                case 403:
-                  message = 'Invalid username/password combination';
-                  break;
-                case 500:
-                  message = 'Internal server error';
-                  break;
-                }
+                const errors: Record<number, string> = {
+                  400: 'Bad request',
+                  403: 'Invalid username/password combination',
+                  500: 'Internal server error'
+                };
+                if (Object.hasOwnProperty.call(errors, resp.status))
+                  message = errors[resp.status];
                 this.setState({
                   errorMessage: message
                 });
               } else {
                 const { token } = JSON.parse(resp.response);
                 tokenStorage.saveToken(token, values.rememberMe);
+                const possibleRedir = sessionStorage.getItem('post-auth-redirect');
+                if (possibleRedir) {
+                  sessionStorage.removeItem('post-auth-redirect');
+                  return window.location.href = possibleRedir;
+                }
+                window.location.href = '/packages';
               }
             });
           }

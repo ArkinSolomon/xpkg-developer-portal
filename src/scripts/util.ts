@@ -24,7 +24,7 @@ export function validateEmail(email: string): boolean {
     email
       .toLowerCase()
       .trim()
-  );
+  ) && (email && typeof email === 'string' && email.length >= 4 && email.length <= 64) as boolean;
 }
 
 /**
