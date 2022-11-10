@@ -12,18 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+import { ChangeEventHandler } from 'react';
 
+function Checkbox(props: { name: string; title: string; center?: boolean; onChange: ChangeEventHandler; }) {
+  const classes = 'input input-checkbox' + (props.center ? ' center' : '');
+  return (
+    <div className={classes}>
+      <input type='checkbox' name={props.name} onChange={props.onChange} />
+      <label>{props.title}</label>
+    </div>
+  );
+}
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+export default Checkbox;

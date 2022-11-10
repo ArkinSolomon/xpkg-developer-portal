@@ -12,18 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+import '../css/Header.scss';
+import HeaderButton from './HeaderButton';
 
+function Header() {
+  return (
+    <header>
+      <h1>X-Pkg Developer Portal</h1>
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+      <div id="header-buttons">
+        <HeaderButton text='Packages' link='/packages' />
+        <HeaderButton text='Documentation' link='https://documentation.x-pkg.net' />
+        <HeaderButton text='Support' link='/support' />
+        <HeaderButton text='Account' link='/account' />
+      </div>
+    </header>
+  );
+}
+export default Header;

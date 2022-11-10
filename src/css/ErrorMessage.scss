@@ -12,18 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+@import "_colors.scss";
+@import "_fonts.scss";
 
+.error-message {
+  color: $error-red;
+  display: block;
+  font-family: $noto-sans;
+  font-size: 10pt;
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+  &.error-message-hidden {
+    display: none;
+  }
+
+  &.center {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

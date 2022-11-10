@@ -12,18 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
 
+function Packages() {
+  return (
+    <p>Packages</p>
+  );
+}
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+export default Packages;

@@ -12,18 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+$page-background: #eeeff5;
 
+$dark-blue: #1f222a;
+$dark-blue-hover: #151821;
+$disabled-dark-blue: #757984;
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+$light-gray: #cecece;
+$really-light-gray: #f4f4f4;
+
+$footer-gray: #9e9e9e;
+
+$error-red: #cc2525;

@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied limitations under the License.
+ */
+
+@import "_colors.scss";
+@import "_fonts.scss";
+@import "_mixins.scss";
+
+$header-height: 65px;
+$header-margin: 12px;
+
+header {
+  overflow-x: hidden;
+  position: relative;
+  background-color: $dark-blue;
+  width: 100vw;
+  height: $header-height;
+  font-family: $noto-sans;
+  color: white;
+
+  h1 {
+    margin-left: $header-margin;
+    font-size: 20pt;
+
+    display: flex;
+    align-items: center;
+    height: $header-height;
+  }
+
+  #header-buttons {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    position: absolute;
+
+    display: flex;
+    align-items: center;
+    margin-right: $header-margin;
+  }
+}
+
+.headerButton {
+  color: white;
+  font-family: $noto-sans;
+  border: transparent;
+  background-color: transparent;
+  font-size: 11pt;
+  padding: 5px 12px;
+  border-radius: 4px;
+
+  @include dark-blue-hover;
+}

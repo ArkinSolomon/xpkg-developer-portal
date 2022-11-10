@@ -12,18 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+import '../css/ErrorMessage.scss';
 
+function ErrorMessage(props: { text: string; show: boolean; width?: string; center?: boolean; }) {
+  const width = props.width ?? 'auto';
+  let classes = 'error-message' + (props.show ? '' : ' error-message-hidden');
+  classes += (props.center ? ' center' : '');
+  return (
+    <p className={classes} style={{ width }}>{props.text}</p>
+  );
+}
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+export default ErrorMessage;

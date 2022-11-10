@@ -12,18 +12,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+@import "_colors.scss";
+@import "_fonts.scss";
 
+.help-links {
+  margin-top: 16px;
+  a {
+    color: $light-gray;
+    text-decoration: underline;
+    font-family: $noto-sans;
+    font-size: 9pt;
+    text-align: center;
+    display: block;
+    margin: 11px 0;
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+    &.linkDisabled {
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+  }
+}

@@ -12,18 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+@import "_colors.scss";
+@import "_fonts.scss";
 
+footer {
+  font-family: $noto-sans;
+  color: $footer-gray;
+  margin-top: 8px;
+  padding-bottom: 32px;
+  text-align: center;
+  font-size: 8pt;
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+  hr {
+    margin-bottom: 20px;
+    width: 80%;
+    background-color: $footer-gray;
+  }
+
+  a {
+    text-decoration: underline;
+    color: $footer-gray;
+  }
+}

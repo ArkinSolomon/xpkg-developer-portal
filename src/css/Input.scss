@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied limitations under the License.
+ */
+@import "_fonts.scss";
+@import "_colors.scss";
+
+.input {
+  margin-top: 15px;
+  font-family: $noto-sans;
+  display: block;
+}
+
+.input-field {
+
+  &.center {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  input {
+    display: block;
+    border-radius: 5px;
+    border: 1px solid $light-gray;
+    height: 18pt;
+    padding-left: 4px;
+    margin-top: 8px;
+    font-size: 11pt;
+    width: 100%;
+  }
+
+  label {
+    margin-left: 1px;
+    font-size: 12pt;
+  }
+}
+
+.input-checkbox {
+  font-family: $noto-sans;
+
+  input {
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  
+  &.center {
+    text-align: center;
+  }
+}

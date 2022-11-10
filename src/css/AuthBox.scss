@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied limitations under the License.
+ */
+@import "_colors.scss";
+@import "_fonts.scss";
+@import "_mixins.scss";
+
+$auth-box-height: 30em;
+$auth-box-width: 24em;
+
+#auth-box-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+#auth-box {
+  margin: 4em 0;
+  border: 1px solid $light-gray;
+  border-radius: 8px;
+  background-color: white;
+  width: $auth-box-width;
+  height: $auth-box-height;
+  padding: 12px;
+
+  h2 {
+    font-family: $noto-sans;
+    color: $dark-blue;
+    font-size: 19pt;
+    text-align: center;
+  }
+
+  #auth-box-children-wrapper {
+    padding: 12px;
+    margin-top: 1em;
+    height: calc($auth-box-height - 7em);
+    width: 80%;
+
+    border-radius: 4px;
+    border: 1px solid $really-light-gray;
+
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  input[type="submit"] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+
+    font-family: $noto-sans;
+    font-size: 14pt;
+
+    transform: translateY(-50%);
+    min-height: 45px;
+    width: 60%;
+
+    border: 0;
+    border-radius: 4px;
+    color: white;
+    background-color: $dark-blue;
+
+    @include dark-blue-hover;
+
+    &:disabled {
+      background-color: $disabled-dark-blue;
+      cursor: default;
+    }
+  }
+}

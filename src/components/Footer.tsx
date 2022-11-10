@@ -12,18 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './css/reset.css';
-import './css/index.scss';
-import Head from './components/Head';
-import App from './App';
+import '../css/Footer.scss';
 
+function Footer() {
+  return (
+    <footer>
+      <hr />
+      &copy; X-Pkg Developer Portal Contributors. X-Pkg is an open source project, view the code on <a href="https://github.com/ArkinSolomon/xpkg-developer-portal">GitHub</a>.
+    </footer>
+  );
+}
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <Head />
-    <App />
-  </React.StrictMode>
-);
+export default Footer;
