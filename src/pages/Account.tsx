@@ -14,7 +14,11 @@
  */
 
 import { Component } from 'react';
+import MainContainer from '../components/MainContainer';
 import * as tokenStorage from '../scripts/tokenStorage';
+import '../css/MainContainer.scss';
+import * as SB from '../components/SideBar';
+const { default: SideBar } = SB;
 
 class Account extends Component {
   constructor(props: Record<string, never>) {
@@ -29,7 +33,23 @@ class Account extends Component {
 
   render() {
     return (
-      <p>Account</p>
+      <MainContainer left={
+        (
+          <SideBar items={[
+            {
+              text: 'Logout',
+              type: SB.ItemType.ACTION,
+              action: (function () { 
+                console.log('Logout');
+              }).bind(this)
+            } as SB.SideBarActionItem
+          ]} />
+        )
+      } right={
+        (
+          <p>Right</p>
+        )
+      } />
     );
   }
 }
