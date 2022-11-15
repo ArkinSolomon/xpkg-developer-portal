@@ -27,23 +27,25 @@ export type SideBarActionItem = SideBarItem & {
 };
 
 export type SideBarRenderItem = SideBarItem & {
-  render: () => ReactNode;
+  render: () => Component | Component[];
 }
 
-import { Component, ReactNode } from 'react';
+import { Component } from 'react';
 import SBI from './SideBarItem';
+import '../css/SideBar.scss';
 
 function SideBar({ items }: { items: SideBarItem[] | SideBarItem; }) {
   if (!Object.hasOwnProperty.call(items, 'length'))
     items = [items as SideBarItem];
   
-  const nodes: Component[] = [];
-  for (const item of items as SideBarItem[])
-    nodes.push(new SBI(item));
+  const nodes: JSX.Element[] = [];
+  for (const item of items as SideBarItem[]) 
+    nodes.push(<SBI {...item} />);
+  
   return (
-    <>
+    <div id='side-bar'>
       {nodes}
-    </>
+    </div>
   );
 }
 

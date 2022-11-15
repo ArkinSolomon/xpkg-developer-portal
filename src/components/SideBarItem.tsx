@@ -19,7 +19,7 @@ import * as SideBar from './SideBar';
 class SideBarItem extends Component {
 
   ref: RefObject<HTMLDivElement>;
-  action: () => void;
+  action: () => void | Component | Component[];
 
   constructor(props: SideBar.SideBarItem) {
     super(props);
@@ -34,11 +34,20 @@ class SideBarItem extends Component {
 
   render() {
     const props = this.props as SideBar.SideBarItem;
-    return (
-      <div ref={this.ref}>
-        <button onClick={this.action}>{props.text}</button>
-      </div>
-    );
+    switch (props.type) {
+    case SideBar.ItemType.ACTION:
+      return (
+        <div className='side-bar-item' ref={this.ref}>
+          <button onClick={this.action}>{props.text}</button>
+        </div>
+      );
+    case SideBar.ItemType.RENDER:
+      return (
+        <div className='side-bar-item' ref={this.ref}>
+          {/* <button onClick={this.updateRender}>{props.text}</button> */}
+        </div>
+      );
+    }
   }
 }
 

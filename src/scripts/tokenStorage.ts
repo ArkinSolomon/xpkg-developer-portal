@@ -31,9 +31,17 @@ export function checkAuth(): string | null {
  * @param {string} token The token we received from the server.
  * @param {boolean} save True if we should save the token in local storage rather than session storage.
  */
-export function saveToken(token: string, save: boolean) {
+export function saveToken(token: string, save: boolean): void {
   let storage: Storage = sessionStorage;
   if (save)
     storage = localStorage;
   storage.setItem('token', token);
+}
+
+/**
+ * Delete any stored token, or do nothing if none exists.
+ */
+export function delToken(): void {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
 }
