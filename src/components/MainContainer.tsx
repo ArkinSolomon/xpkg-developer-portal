@@ -15,12 +15,13 @@
 type Elements = ReactNode | ReactNode[];
 
 import { ReactNode } from 'react';
+import '../css/MainContainer.scss';
 
 function MainContainer(props: { right?: Elements; left?: Elements; children?: Elements; }) {
-  if (!props.left)
+  if (!props.left && !props.children)
     props.children = props.right;
 
-  if (!props.right)
+  if (!props.right && !props.children)
     props.children = props.left;
   
   if (props.left && props.right)

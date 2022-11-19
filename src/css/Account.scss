@@ -12,16 +12,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import Helmet from 'react-helmet';
+@import "_fonts.scss";
+@import "_colors.scss";
 
-function Head() {
-  return (
-    <Helmet>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
-      </style>
-    </Helmet>
-  );
+.error-screen {
+  font-family: $noto-sans;
+  width: 100%;
+
+  text-align: center;
+  color: $dark-blue;
+
+  h3 {
+    margin-bottom: 1em;
+    font-size: 19pt;
+  }
+
+  p {
+    font-size: 13pt;
+  }
+
+  img {
+    display: block;
+    width: 100px;
+    height: 100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
-
-export default Head;

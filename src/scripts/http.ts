@@ -13,7 +13,14 @@
  * either express or implied limitations under the License.
  */
 
-export function post(url: string, body: Record<string, string>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void {
+/**
+ * Make an HTTP post request asynchronously, executing a callback after completion.
+ * 
+ * @param {string} url The URL to make the request to.
+ * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
+ * @param {(err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void} cb The callback to execute after the operation completes.
+ */
+export function postCB(url: string, body: Record<string, string>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void {
   const xhttp = new XMLHttpRequest();
   xhttp.onload = function () {
     cb(void (0), this);
@@ -22,6 +29,23 @@ export function post(url: string, body: Record<string, string>, cb: (err: Progre
   xhttp.open('POST', url, true);
   xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xhttp.send(encodeURIObject(body));
+}
+
+/**
+ * Make an HTTP post request asynchronously, returning a promise. 
+ * 
+ * @param {string} url The URL to make the request to.
+ * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
+ * @return {Promise<XMLHttpRequest>} The request after it completes, or errors.
+ */
+export async function post(url: string, body: Record<string, string>): Promise<XMLHttpRequest> {
+  return new Promise((resolve, reject) => {
+    postCB(url, body, (err, res) => {
+      if (err)
+        return reject(err);
+      resolve(res as XMLHttpRequest);
+    });
+  });
 }
 
 /**

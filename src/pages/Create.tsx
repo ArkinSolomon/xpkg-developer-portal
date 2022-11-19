@@ -104,7 +104,7 @@ class Create extends Component {
               errorMessage: ''
             });
             const { email, password, name } = values;
-            http.post('http://localhost:5020/auth/create', { email, password, name }, (err, r) => {
+            http.postCB('http://localhost:5020/auth/create', { email, password, name }, (err, r) => {
               setSubmitting(false);
               if (err) {
                 this.setState({

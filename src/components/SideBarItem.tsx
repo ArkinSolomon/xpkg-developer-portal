@@ -13,41 +13,26 @@
  * either express or implied limitations under the License.
  */
 
-import { Component, createRef, RefObject } from 'react';
+import { Component} from 'react';
 import * as SideBar from './SideBar';
 
 class SideBarItem extends Component {
 
-  ref: RefObject<HTMLDivElement>;
-  action: () => void | Component | Component[];
+  action: () => void;
 
   constructor(props: SideBar.SideBarItem) {
     super(props);
-    if (props.type === SideBar.ItemType.ACTION && !Object.hasOwnProperty.call(props, 'action'))
-      throw new Error('SideBarItem: Props has no action function, but is declared as a render item');
-    else if (props.type === SideBar.ItemType.RENDER && !Object.hasOwnProperty.call(props, 'render'))
-      throw new Error('SideBarItem: Props has no render function, but is declared as a render item');
     
-    this.action = (props as SideBar.SideBarActionItem).action ?? (props as SideBar.SideBarRenderItem).render;
-    this.ref = createRef<HTMLDivElement>();
+    this.action = props.action;
   }
 
   render() {
     const props = this.props as SideBar.SideBarItem;
-    switch (props.type) {
-    case SideBar.ItemType.ACTION:
-      return (
-        <div className='side-bar-item' ref={this.ref}>
-          <button onClick={this.action}>{props.text}</button>
-        </div>
-      );
-    case SideBar.ItemType.RENDER:
-      return (
-        <div className='side-bar-item' ref={this.ref}>
-          {/* <button onClick={this.updateRender}>{props.text}</button> */}
-        </div>
-      );
-    }
+    return (
+      <div className='side-bar-item'>
+        <button onClick={this.action}>{props.text}</button>
+      </div>
+    );
   }
 }
 

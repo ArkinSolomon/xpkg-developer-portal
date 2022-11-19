@@ -20,17 +20,9 @@ export enum ItemType {
 export type SideBarItem = {
   text: string;
   type: ItemType;
-};
-
-export type SideBarActionItem = SideBarItem & {
   action: () => void;
 };
 
-export type SideBarRenderItem = SideBarItem & {
-  render: () => Component | Component[];
-}
-
-import { Component } from 'react';
 import SBI from './SideBarItem';
 import '../css/SideBar.scss';
 
