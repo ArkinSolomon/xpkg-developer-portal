@@ -21,3 +21,32 @@
   cursor: pointer;
  }
 }
+
+@mixin submit-button {
+  @include dark-blue-hover;
+
+  font-family: $noto-sans;
+  font-size: 14pt;
+  
+  border: 0;
+  border-radius: 4px;
+  color: white;
+  background-color: $dark-blue;
+
+  &:disabled {
+    background-color: $disabled-dark-blue;
+    cursor: default;
+  }
+}
+
+@mixin secondary-button {
+  @include submit-button;
+
+  background-color: $gray;
+
+  &:hover {
+    transition: background-color .2s linear;
+    background-color: $dark-gray;
+    cursor: pointer;
+   }
+}

@@ -67,8 +67,7 @@ class Login extends Component {
   }
 
   validate({ email, password }: LoginValues): FormikErrors<LoginValues> {
-    let invalidForm = false;
-    invalidForm = !util.validateEmail(email) || !util.validatePassword(password);
+    const invalidForm = !util.validateEmail(email) || !util.validatePassword(password);
     this.setState({
       errorMessage: '',
       invalidForm

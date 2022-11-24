@@ -15,14 +15,14 @@
 import { ChangeEventHandler } from 'react';
 import '../css/Input.scss';
 
-function InputField(props: { name: string; title: string; center?: boolean; width?: string; type?: string; value?: string; onChange?: ChangeEventHandler }) {
+function InputField(props: { name: string; title: string; placeholder?: string; center?: boolean; width?: string; type?: string; defaultValue?: string; onChange?: ChangeEventHandler; }) {
   const classes = 'input input-field' + (props.center ? ' center' : '');
   const width = props.width ?? '120px';
   const type = props.type ?? 'text';
   return (
     <div className={classes} style={{ width }}>
       <label htmlFor={props.name}>{props.title}</label>
-      <input type={type} name={props.name} placeholder={props.title} value={props.value} onChange={props.onChange} />
+      <input type={type} name={props.name} placeholder={props.placeholder ?? props.title} defaultValue={props.defaultValue} onChange={props.onChange} />
     </div>
   );
 }

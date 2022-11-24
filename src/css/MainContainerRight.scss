@@ -12,18 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-$page-background: #eeeff5;
+@import "_colors.scss";
+@import "_fonts.scss";
 
-$dark-blue: #1f222a;
-$dark-blue-hover: #0f1321;
-$disabled-dark-blue: #757984;
+.main-container-right {
+  font-family: $noto-sans;
+  padding: 0 1.1em;
 
-$dark-gray: #464646;
-$gray: #656565;
-$light-gray: #cecece;
-$really-light-gray: #f4f4f4;
-
-$footer-gray: #9e9e9e;
-
-$error-red: #cc2525;
-$good-green: #3fd161; // Haven't tested this yet so 
+  h1 {
+    color: $dark-blue;
+    font-size: 20pt;
+    margin-bottom: 10px;
+  }
+}

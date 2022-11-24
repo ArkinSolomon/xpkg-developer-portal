@@ -36,3 +36,13 @@ export function validateEmail(email: string): boolean {
 export function validatePassword(password: string): boolean {
   return (password && typeof password === 'string' && password.length >= 8 && password.length <= 64 && password.toLowerCase() !== 'password') as boolean;
 }
+
+/**
+ * Check if a name is valid. Same function as in /routes/auth.ts on the registry.
+ * 
+ * @param {string} name The name to validate.
+ * @returns {boolean} True if the name is valid.
+ */
+export function validateName(name: string): boolean {
+  return (name && typeof name=== 'string' && name.length > 3 && name.length <= 32) as boolean;
+}
