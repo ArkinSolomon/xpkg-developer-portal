@@ -30,19 +30,21 @@ type AccountData = {
  * @property {ReactElement} rendered The element to render on the right side.
  * @property {AccountData} accountData The data received from the server concerning the user/author's account.
  * @property {boolean} invalidNameChangeForm True if the form data for the name change form is invalid.
- * @property {boolean} popupOpen True if a popup is currently open.
+ * @property {ConfirmPopupConfig} [popupConfig] True if a popup is currently open.
  * @property {string} nameValue The value of the name field after pressing submit.
  * @property {string} isSubmitting True if a form is currently submitting something.
  * @property {string} [nameChangeError] Has a value if there was an error changing the name.
+ * @property {boolean} isPopupOpen True if the popup is open.
  */
 type AccountState = {
   rendered: ReactElement;
   accountData: AccountData;
   invalidNameChangeForm: boolean;
-  popupOpen: boolean;
+  popupConfig?: ConfirmPopupConfig;
   nameValue: string;
   isSubmitting: boolean;
   nameChangeError?: string;
+  isPopupOpen: boolean;
 };
 
 /**
@@ -66,7 +68,7 @@ import MainContainerRight from '../components/MainContainerRight';
 import InputField from '../components/InputField';
 import { Formik, FormikErrors } from 'formik';
 import * as SB from '../components/SideBar';
-import ConfirmPopup from '../components/ConfirmPopup';
+import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 const { default: SideBar } = SB;
 
 class Account extends Component {
@@ -81,7 +83,6 @@ class Account extends Component {
       rendered: this.loading(),
       accountData: {},
       invalidNameChangeForm: false,
-      popupOpen: false,
       isSubmitting: false
     } as AccountState;
 
@@ -156,8 +157,9 @@ class Account extends Component {
   
     this.setState({
       nameChangeError: void(0),
-      invalidNameChangeForm: isValid
-    } as AccountState);
+      invalidNameChangeForm: isValid,
+      nameValue: name
+    } as Partial<AccountState>);
     return {};
   }
 
@@ -180,10 +182,70 @@ class Account extends Component {
         onSubmit={
           (values, { setSubmitting }) => {
             this.setState({
-              popupOpen: true,
+              isPopupOpen: true,
+              popupConfig: {
+                title: 'Confirm name change',
+                confirmText: 'Confirm',
+                closeText: 'Cancel',
+                onClose:  () => this.setState({
+                  isPopupOpen: false
+                } as Partial<AccountState>),
+                onConfirm:   () => {
+                  if (this.state.isSubmitting)
+                    return;
+                  this.setState({
+                    isSubmitting: true
+      
+                    // Force a rerender of the basic information page to gray out the change button
+                  } as AccountState, () => this.updateRendered(this.basicInformation()));
+      
+                  postCB('http://localhost:5020/account/changeName', {
+                    newName: this.state.nameValue,
+                    token: tokenStorage.checkAuth() as string
+                  }, (err, res) => {
+                    if (err)
+                      return console.error(err);
+                      
+                    let nameChangeError: string | undefined = void (0);
+                    let popupConfig: ConfirmPopupConfig | undefined = void (0);
+                    if (res?.status !== 204) {
+                      switch (res?.status) {
+                      case 400:
+                        nameChangeError = 'Invalid username';
+                        break;
+                      case 406:
+                        nameChangeError = 'You changed your username within the last 30 days';
+                        break;
+                      }
+                    } else {
+
+                      // New popup doesn't show up so i need to figure that out ig, probably something with close()
+                      popupConfig = {
+                        title: 'Name changed successfully',
+                        showClose: false,
+                        confirmText: 'Ok',
+                        onConfirm: () => {
+                          window.location.href = '/';
+                        },
+                        children: <p className='generic-popup-text'>Your name has been changed successfully. You will be logged out in 5 seconds, or when you press ok.</p>
+                      };
+                      
+                      tokenStorage.delToken();
+                      setTimeout(() => window.location.href = '/', 5000);
+                    }
+                    this.setState({
+                      nameChangeError,
+                      popupConfig,
+                      isPopupOpen: popupConfig !== void(0), 
+                      isSubmitting: false,
+                    } as AccountState, () => this.updateRendered(this.basicInformation()));
+                  });
+                },
+                children: <p className='generic-popup-text'>Are you sure you want to change your name from <b>{ this.state.accountData.name }</b> to <b>{this.state.nameValue}</b>. Your name can not be changed again for 30 days.</p>
+              },
               nameValue: values.name,
               isSubmitting: false
-            } as AccountState, () => {
+            } as Partial<AccountState>, () => {
               setSubmitting(false);
             }); 
           }
@@ -231,56 +293,7 @@ class Account extends Component {
   render() {
     return (
       <>
-        <ConfirmPopup
-          title='Confirm name change'
-          open={this.state.popupOpen}
-          confirmText='Confirm'
-          closeText='Cancel'
-          onClose={
-            () => this.setState({
-              popupOpen: false
-            } as AccountState)
-          }
-          onConfirm={
-            () => {
-              if (this.state.isSubmitting)
-                return;
-              this.setState({
-                isSubmitting: true
-
-                // Force a rerender of the basic information page to gray out the change button
-              } as AccountState, () => this.updateRendered(this.basicInformation()));
-
-              postCB('http://localhost:5020/account/changeName', {
-                newName: this.state.nameValue,
-                token: tokenStorage.checkAuth() as string
-              }, (err, res) => {
-                if (err)
-                  return console.error(err);
-                
-                let nameChangeError: undefined | string = void(0);
-                if (res?.status !== 204) {
-                  switch (res?.status) {
-                  case 400:
-                    nameChangeError = 'Invalid username';
-                    break;
-                  case 406:
-                    nameChangeError = 'You changed your username within the last 30 days';
-                    break;
-                  }
-                }
-                this.setState({
-                  nameChangeError,
-                  isSubmitting: false
-                } as AccountState, () => this.updateRendered(this.basicInformation()));
-
-                console.log(res);
-              });
-            }
-          }
-        >
-          <p className='generic-popup-text'>Are you sure you want to change your name from <b>{ this.state.accountData.name }</b> to <b>{this.state.nameValue}</b>. Your name can not be changed again for 30 days.</p>
-        </ConfirmPopup>
+        <ConfirmPopup {...this.state.popupConfig as ConfirmPopupConfig} open={this.state.isPopupOpen} />
 
         <MainContainer
           left={

@@ -41,7 +41,6 @@ export type ConfirmPopupConfig = {
   onConfirm?: () => void;
   onCancel?: () => void;
   onClose?: () => void;
-  open: boolean;
   children: ReactElement;
 };
 
@@ -49,7 +48,7 @@ import { ReactElement, ReactNode } from 'react';
 import Popup from 'reactjs-popup';
 import '../css/ConfirmPopup.scss';
 
-function ConfirmPopup(props: ConfirmPopupConfig) {
+function ConfirmPopup(props: ConfirmPopupConfig & { open: boolean; }) {
 
   const showClose = props.showClose ?? true;
 
@@ -58,7 +57,10 @@ function ConfirmPopup(props: ConfirmPopupConfig) {
 
   return (
     <Popup
+      
+      // Now, this is always true, but for some reason if you get rid of this, and hardcode it as true, it doesn't work
       open={props.open}
+
       modal
       nested
       closeOnDocumentClick={false}
