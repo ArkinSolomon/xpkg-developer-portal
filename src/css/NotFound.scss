@@ -12,21 +12,36 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import MainContainer from '../components/MainContainer';
-import '../css/NotFound.scss';
+@import "_fonts.scss";
+@import "_colors.scss";
+@import "_mixins.scss";
 
-function NotFound() {
-  return (
-    <MainContainer>
-      <div className='error-container'>
-        <div className='text-center'>
-          <h1>404</h1>
-          <p>Page not found, you may have followed a broken link.</p>
-          <button onClick={() => window.location.href = '/packages'}>Return Home</button>
-        </div>
-      </div>
-    </MainContainer>
-  );
+.error-container {
+  height: 75vh;
+  width: 100%;
+  font-family: $noto-sans;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  div {
+    text-align: center;
+
+    h1 {
+      font-size: 60pt;
+      color: $dark-blue;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14pt;
+    }
+
+    button {
+      @include submit-button;
+
+      margin-top: 12px;
+    }
+  }
 }
-
-export default NotFound;
