@@ -142,6 +142,7 @@ class Account extends Component {
     );
   }
 
+  // TODO swtich this and loading page to new component
   error(error: string): ReactElement {
     return (
       <div className="error-screen">
@@ -301,14 +302,12 @@ class Account extends Component {
               <SideBar items={[
                 {
                   text: 'Basic Information',
-                  type: SB.ItemType.ACTION,
                   action: () => { 
                     this.updateRendered(this.basicInformation());
                   }
                 },
                 {
                   text: 'Change Email',
-                  type: SB.ItemType.ACTION,
                   action: () => { 
                     this.updateRendered((
                       <>
@@ -320,7 +319,6 @@ class Account extends Component {
                 },
                 {
                   text: 'Change Password',
-                  type: SB.ItemType.ACTION,
                   action: () => { 
                     this.updateRendered((
                       <>
@@ -332,7 +330,6 @@ class Account extends Component {
                 },
                 {
                   text: 'Logout',
-                  type: SB.ItemType.ACTION,
                   action: function () { 
                     tokenStorage.delToken();
                     window.location.href = '/';

@@ -12,28 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-@import "_fonts.scss";
-@import "_colors.scss";
-@import "_mixins.scss";
+import '../css/MainContainerRight.scss';
 
-.account-form {
-  .input-field {
-    display: inline-block;
-    margin-right: 20px;
-    margin-bottom: 7px;
-  }
-
-  .error-text {
-    font-size: 12pt;
-    color: $error-red;
-  }
-
-  input[type="submit"] {
-    @include submit-button;
-
-    display: inline-block;
-    height: 30px;
-    width: 95px;
-    font-size: 13pt;
-  }
+function MainContainerRightError({ message }: { message: string; }) {
+  return (
+    <div className="error-screen">
+      <h3>There was an error</h3>
+      <p>{ message }</p>
+    </div>
+  );
 }
+
+export default MainContainerRightError;

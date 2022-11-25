@@ -12,19 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-export enum ItemType {
-  ACTION,
-  RENDER
-}
 
+/**
+ * An item that can go in the sidebar.
+ * 
+ * @typedef {Object} SideBarItem
+ * @property {string} text The text to display for the item.
+ * @property {Action} action The function to execute when the item is clicked.
+ */
 export type SideBarItem = {
   text: string;
-  type: ItemType;
   action: () => void;
 };
 
 import SBI from './SideBarItem';
 import '../css/SideBar.scss';
+import { nanoid } from 'nanoid';
 
 function SideBar({ items }: { items: SideBarItem[] | SideBarItem; }) {
   if (!Object.hasOwnProperty.call(items, 'length'))
@@ -32,7 +35,7 @@ function SideBar({ items }: { items: SideBarItem[] | SideBarItem; }) {
   
   const nodes: JSX.Element[] = [];
   for (const item of items as SideBarItem[]) 
-    nodes.push(<SBI {...item} />);
+    nodes.push(<SBI {...item} key={nanoid(5)} />);
   
   return (
     <div id='side-bar'>

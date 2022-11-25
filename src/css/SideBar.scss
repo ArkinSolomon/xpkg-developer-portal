@@ -17,8 +17,10 @@
 
 #side-bar {
 
-  .side-bar-item {
+  border-right: 1px solid $light-gray;
+  height: 100%;
 
+  .side-bar-item {
     width: 100%;
     border-bottom: 1px solid $light-gray;
     margin-bottom: 6px;

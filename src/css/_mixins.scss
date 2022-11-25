@@ -15,19 +15,23 @@
 @import "_colors.scss";
 
 @mixin dark-blue-hover {
- &:hover {
-  transition: background-color .2s linear;
-  background-color: $dark-blue-hover;
-  cursor: pointer;
- }
+  &:hover {
+    transition: background-color .2s linear;
+    background-color: $dark-blue-hover;
+    cursor: pointer;
+  }
 }
 
 @mixin submit-button {
   @include dark-blue-hover;
 
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
   font-family: $noto-sans;
   font-size: 14pt;
-  
+
   border: 0;
   border-radius: 4px;
   color: white;
@@ -48,5 +52,5 @@
     transition: background-color .2s linear;
     background-color: $dark-gray;
     cursor: pointer;
-   }
+  }
 }

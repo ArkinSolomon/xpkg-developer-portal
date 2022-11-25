@@ -18,27 +18,30 @@ import { ReactNode } from 'react';
 import '../css/MainContainer.scss';
 
 function MainContainer(props: { right?: Elements; left?: Elements; children?: Elements; }) {
-  if (!props.left && !props.children)
-    props.children = props.right;
+  let children = props.children;
+  const left = props.left;
+  const right = props.right;
+  if (!left && !children)
+    children = right;
 
-  if (!props.right && !props.children)
-    props.children = props.left;
+  if (!right && !children)
+    children = left;
   
-  if (props.left && props.right)
+  if (left && right)
     return (
       <div id='main-container'>
         <div id='left'>
-          {props.left}
+          {left}
         </div>
         <div id="right">
-          {props.right}
+          {right}
         </div>
       </div>
     );
   else
     return (
       <div id='main-container'>
-        {props.children}
+        {children}
       </div>
     );
 }
