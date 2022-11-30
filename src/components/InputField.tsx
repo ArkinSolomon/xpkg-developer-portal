@@ -15,8 +15,19 @@
 import { ChangeEventHandler } from 'react';
 import '../css/Input.scss';
 
-function InputField(props: { name: string; title: string; placeholder?: string; center?: boolean; width?: string; type?: string; defaultValue?: string; onChange?: ChangeEventHandler; }) {
-  const classes = 'input input-field' + (props.center ? ' center' : '');
+function InputField(props: {
+  name: string;
+  title: string;
+  placeholder?: string;
+  center?: boolean;
+  width?: string;
+  type?: string;
+  defaultValue?: string;
+  onChange?: ChangeEventHandler;
+  classes?: string | string[];
+}) {
+  const propsClasses = props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[];
+  const classes = 'input input-field' + (props.center ? ' center' : '') + ' ' + (propsClasses ?? []).join(' ');
   const width = props.width ?? '120px';
   const type = props.type ?? 'text';
   return (

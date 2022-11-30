@@ -220,7 +220,6 @@ class Account extends Component {
                       }
                     } else {
 
-                      // New popup doesn't show up so i need to figure that out ig, probably something with close()
                       popupConfig = {
                         title: 'Name changed successfully',
                         showClose: false,

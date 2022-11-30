@@ -20,6 +20,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Create from './pages/Create';
 import Packages from './pages/Packages';
+import Upload from './pages/Upload';
 import NotFound from './pages/NotFound';
 import Support from './pages/Support';
 import Account from './pages/Account';
@@ -33,6 +34,7 @@ function App() {
         <Route path='/' element={<Login />} />
         <Route path='/create' element={<Create />} />
         <Route path='/packages' element={<Packages />} />
+        <Route path='/packages/upload' element={<Upload />} />
         <Route path='/support' element={<Support />} />
         <Route path='/account' element={<Account />} />
         <Route path='*' element={<NotFound />} />

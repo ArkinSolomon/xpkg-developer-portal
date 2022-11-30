@@ -68,14 +68,15 @@ type PackageData = {
  * @property {PackagePage} page The current page
  * @property {boolean} isLoading True if the packages are currently loading.
  * @property {string} [errorMessage] Undefined if there is no error, otherwise has the error message.
+ * @property {Object} data The data returned from the server concerning the packages.
+ * @property {PackageData[]} [packages] The packages returned from the server.
  */
 type PackagesState = {
   page: PackagePage;
   isLoading: boolean;
   errorMessage?: string;
   data: {
-    // Stuff returned from server
-    // packages?: Package[];
+    packages?: PackageData[];
     // resources?: Resource[];
   };
 }

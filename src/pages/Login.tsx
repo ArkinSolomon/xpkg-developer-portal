@@ -134,11 +134,38 @@ class Login extends Component {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
           const errorMessageActive = (this.state as LoginState).errorMessage !== '';
           return (
-            <AuthBox title='Login' onSubmit={handleSubmit} isSubmitting={isSubmitting} submitEnabled={!errorMessageActive && !(this.state as LoginState).invalidForm}>
-              <ErrorMessage text={(this.state as LoginState).errorMessage} show={errorMessageActive} width='80%' center={true} />
-              <InputField name='email' title='Email' center={true} width='80%' onChange={handleChange} />
-              <InputField name='password' title='Password' center={true} width='80%' type='password' onChange={handleChange} />
-              <Checkbox name='rememberMe' title='Remember Me' center={true} onChange={handleChange} />
+            <AuthBox
+              title='Login'
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              submitEnabled={!errorMessageActive && !(this.state as LoginState).invalidForm}
+            >
+              <ErrorMessage
+                text={(this.state as LoginState).errorMessage}
+                show={errorMessageActive}
+                width='80%'
+                center={true}
+              />
+              <InputField
+                name='email'
+                title='Email'
+                center={true}
+                width='80%'
+                onChange={handleChange}
+              />
+              <InputField
+                name='password'
+                title='Password'
+                center={true}
+                width='80%'
+                type='password'
+                onChange={handleChange}
+              />
+              <Checkbox
+                name='rememberMe'
+                title='Remember Me'
+                center={true}
+                onChange={handleChange} />
               <div className="help-links">
                 <a href="/create" className={linkDisabled}>Create account</a>
                 <a href="/forgot" className={linkDisabled}>Forgot Password</a>
