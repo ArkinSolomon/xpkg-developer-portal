@@ -38,15 +38,9 @@
     font-size: 11pt;
     width: 100%;
   }
-
-  label {
-    margin-left: 1px;
-    font-size: 12pt;
-  }
 }
 
 .input-checkbox {
-  font-family: $noto-sans;
   font-size: 9pt;
 
   input {
@@ -54,8 +48,41 @@
     margin-right: 8px;
   }
 
-  
   &.center {
     text-align: center;
   }
+}
+
+.input-dropdown {
+  display: inline-block;
+
+  select {
+    display: block;
+    appearance: none;
+    height: 20pt;
+    width: 100%;
+
+    border-radius: 5px;
+    border: 1px solid $light-gray;
+
+    padding: 0 10px;
+    
+    font-size: 11pt;
+    background: url(https://stackoverflow.com/favicon.ico) 96% / 15% no-repeat white;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 11px;
+  }
+
+  // &.center {
+  // Not implemented
+  // }
+}
+
+.input-field,
+.input-dropdown label {
+  margin-left: 1px;
+  font-size: 12pt;
 }

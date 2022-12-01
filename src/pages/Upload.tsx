@@ -14,20 +14,6 @@
  */
 
 /**
- * The state of the upload page
- * 
- * @typedef {Object} UploadState
- * @property {string} [packageName] The errors with the package name.
- * @property {string} [packageId] The errors with the package id.
- */
-type UploadState = {
-  errors: {
-    packageName?: string;
-    packageId?: string;
-  }
-}
-
-/**
  * Values for the upload form.
  * 
  * @typedef {Object} UploadValues
@@ -37,10 +23,22 @@ type UploadState = {
 type UploadValues = {
   packageName: string;
   packageId: string;
+  packageType: string;
 };
+
+/**
+ * The state of the upload page
+ * 
+ * @typedef {Object} UploadState
+ * @property {Object} errors The errors for each field, the same items in {@linkcode UploadValues}, but with all keys optional.
+ */
+ type UploadState = {
+   errors: Partial<UploadValues>;
+}
 
 import { Formik, FormikErrors } from 'formik';
 import { Component, ReactNode } from 'react';
+import InputDropdown from '../components/InputDropdown';
 import InputField from '../components/InputField';
 import MainContainer from '../components/MainContainer';
 import MainContainerRight from '../components/MainContainerRight';
@@ -97,6 +95,7 @@ class Upload extends Component {
                 
                 const packageId = values.packageId.trim().toLowerCase();
                 const packageName = values.packageName.trim();
+                const packageType = values.packageType.trim().toLowerCase();
               }
             }>
             {({
@@ -108,17 +107,27 @@ class Upload extends Component {
                 <form onSubmit={handleSubmit}>
                   <div className='upload-input-section'>
                     <InputField
-                      classes={['package-upload-field']}
+                      classes={['package-upload-input']}
                       name='packageName'
                       title='Package Name'
                       width='30%'
                       onChange={handleChange}
                     />
                     <InputField
-                      classes={['package-upload-field']}
+                      classes={['package-upload-input']}
                       name='packageId'
                       title='Package Identifier'
                       width='30%'
+                      onChange={handleChange}
+                    />
+                    <InputDropdown
+                      classes={['package-upload-input']}
+                      name='packageType'
+                      label='Package Type'
+                      items={{
+                        aircraft: 'Aircraft',
+                        other: 'Other'
+                      }}
                       onChange={handleChange}
                     />
                   </div>
