@@ -14,6 +14,7 @@
  */
 @import "_mixins.scss";
 @import "_fonts.scss";
+@import "_colors.scss";
 
 .upload-button {
   @include submit-button;
@@ -22,4 +23,10 @@
     line-height: 14pt;
     font-size: 24pt;
   }
+}
+
+.success-message {
+  color: $good-green;
+  display: block;
+  padding-bottom: 10px;
 }

@@ -33,7 +33,7 @@ function InputDropdown(props: {
     if (!defaultValue)
       defaultValue = value;
       
-    items.push(<option value={value}>{displayVal}</option>);
+    items.push(<option value={value} key={value}>{displayVal}</option>);
   }
 
   return (

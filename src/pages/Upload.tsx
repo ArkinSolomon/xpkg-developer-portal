@@ -31,9 +31,11 @@ type UploadValues = {
  * 
  * @typedef {Object} UploadState
  * @property {Object} errors The errors for each field, the same items in {@linkcode UploadValues}, but with all keys optional.
+ * @property {string} [uploadError] Any error that occured after pressing the upload button.
  */
  type UploadState = {
    errors: Partial<UploadValues>;
+   uploadError?: string;
 }
 
 import { Formik, FormikErrors } from 'formik';
@@ -42,7 +44,10 @@ import InputDropdown from '../components/InputDropdown';
 import InputField from '../components/InputField';
 import MainContainer from '../components/MainContainer';
 import MainContainerRight from '../components/MainContainerRight';
+import ErrorMessage from '../components/ErrorMessage';
 import '../css/Upload.scss';
+import { postCB } from '../scripts/http';
+import { checkAuth, delToken } from '../scripts/tokenStorage';
 
 class Upload extends Component {
 
@@ -73,7 +78,11 @@ class Upload extends Component {
     else if (packageName.length > 32)
       errors.packageName = 'Package name too long';
 
-    this.setState({ errors });
+    console.log('Hello');
+    this.setState({
+      errors,
+      uploadError: ''
+    } as UploadState);
     return {};
   }
 
@@ -87,15 +96,56 @@ class Upload extends Component {
             validateOnMount={true}
             initialValues={{
               packageName: '',
-              packageId: ''
+              packageId: '',
+              packageType: ''
             } as UploadValues}
             onSubmit={
               (values, { setSubmitting }) => {
-                setSubmitting(false);
                 
                 const packageId = values.packageId.trim().toLowerCase();
                 const packageName = values.packageName.trim();
                 const packageType = values.packageType.trim().toLowerCase();
+
+                postCB('http://localhost:5020/packages/new', {
+                  packageId,
+                  packageName,
+                  packageType,
+                  token: checkAuth() as string
+                }, (err, resp) => {
+                  setSubmitting(false);
+                  if (err) {
+                    this.setState({
+                      uploadError: 'Could not connect to server'
+                    });
+                    return console.error(err);
+                  }
+                  
+                  switch (resp?.status) {
+                  case 204:
+                    window.location.href = '/packages?s=' + encodeURIComponent(btoa('Registered new package successfully'));
+                    break;
+                  case 400:
+                    this.setState({
+                      uploadError: {
+                        id_in_use: 'Package identifier already in use',
+                        name_in_use: 'Package name already in use',
+                        invalid_form_data: 'How did you manage this? 0_o'
+                      }[resp.responseText]
+                        ?? ('Unkown issue with form' + resp.responseText)
+                    } as UploadState);
+                    break;
+                  case 401:
+                    window.location.href = '/';
+                    delToken();
+                    break;
+                  case 500:
+                    this.setState({
+                      uploadError: 'Internal server error, try again'
+                    } as UploadState);
+                    break;
+                  }
+                  
+                });
               }
             }>
             {({
@@ -104,41 +154,44 @@ class Upload extends Component {
               isSubmitting
             }) => {
               return (
-                <form onSubmit={handleSubmit}>
-                  <div className='upload-input-section'>
-                    <InputField
-                      classes={['package-upload-input']}
-                      name='packageName'
-                      title='Package Name'
-                      width='30%'
-                      onChange={handleChange}
-                    />
-                    <InputField
-                      classes={['package-upload-input']}
-                      name='packageId'
-                      title='Package Identifier'
-                      width='30%'
-                      onChange={handleChange}
-                    />
-                    <InputDropdown
-                      classes={['package-upload-input']}
-                      name='packageType'
-                      label='Package Type'
-                      items={{
-                        aircraft: 'Aircraft',
-                        other: 'Other'
-                      }}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className='upload-input-section'>
-                    <input
-                      type="submit"
-                      value="Upload"
-                      disabled={isSubmitting || !!Object.keys(this.state.errors).length}
-                    />
-                  </div>
-                </form>
+                <>
+                  <ErrorMessage text={this.state.uploadError ?? ''} show={!!this.state.uploadError} />
+                  <form onSubmit={handleSubmit}>
+                    <div className='upload-input-section'>
+                      <InputField
+                        classes={['package-upload-input']}
+                        name='packageName'
+                        title='Package Name'
+                        width='30%'
+                        onChange={handleChange}
+                      />
+                      <InputField
+                        classes={['package-upload-input']}
+                        name='packageId'
+                        title='Package Identifier'
+                        width='30%'
+                        onChange={handleChange}
+                      />
+                      <InputDropdown
+                        classes={['package-upload-input']}
+                        name='packageType'
+                        label='Package Type'
+                        items={{
+                          aircraft: 'Aircraft',
+                          other: 'Other'
+                        }}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className='upload-input-section'>
+                      <input
+                        type="submit"
+                        value="Upload"
+                        disabled={isSubmitting || !!Object.keys(this.state.errors).length}
+                      />
+                    </div>
+                  </form>
+                </>
               );  
             }}
           </Formik>

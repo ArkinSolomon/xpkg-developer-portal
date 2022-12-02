@@ -68,6 +68,7 @@ type PackageData = {
  * @property {PackagePage} page The current page
  * @property {boolean} isLoading True if the packages are currently loading.
  * @property {string} [errorMessage] Undefined if there is no error, otherwise has the error message.
+ * @property {string} [successMessage] The success message passed in through the query parameters.
  * @property {Object} data The data returned from the server concerning the packages.
  * @property {PackageData[]} [packages] The packages returned from the server.
  */
@@ -75,6 +76,7 @@ type PackagesState = {
   page: PackagePage;
   isLoading: boolean;
   errorMessage?: string;
+  successMessage?: string;
   data: {
     packages?: PackageData[];
     // resources?: Resource[];
@@ -98,10 +100,17 @@ class Packages extends Component {
   constructor(props: Record<string, never>) {
     super(props);
 
+    const urlParams = new URLSearchParams(window.location.search);
+    let successMessage;
+    if (urlParams.has('s')) {
+      successMessage = atob(urlParams.get('s') as string);
+    }
+
     this.state = {
       page: PackagePage.PACKAGES,
       isLoading: true,
-      data: {}
+      data: {},
+      successMessage
     };
 
     const token = tokenStorage.checkAuth();
@@ -168,7 +177,6 @@ class Packages extends Component {
         )}
 
         right={
-
           // We wrapp this in a function just to use regular JS stuff
           ((): ReactNode => {
             if (this.state.errorMessage) {
@@ -184,8 +192,13 @@ class Packages extends Component {
 
                 // Packages page
                 <MainContainerRight title='Packages'>
-                  <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
+                  <>
+                    {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
+                    <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
+                  </>
+
                 </MainContainerRight>
+
               );
             } else {
               return (
