@@ -84,10 +84,10 @@ type PackagesState = {
 }
 
 import { Component, ReactNode } from 'react';
-import MainContainer from '../components/MainContainer';
-import MainContainerRight from '../components/MainContainerRight';
-import MainContainerRightError from '../components/MainContainerRightError';
-import MainContainerRightLoading from '../components/MainContainerRightLoading';
+import MainContainer from '../components/Main Container/MainContainer';
+import MainContainerRight from '../components/Main Container/MainContainerRight';
+import MainContainerRightError from '../components/Main Container/MainContainerRightError';
+import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 import SideBar from '../components/SideBar';
 import { postCB } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';

@@ -12,15 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import '../css/MainContainerRight.scss';
+import { ChangeEventHandler } from 'react';
+import '../../css/Input.scss';
 
-function MainContainerRightError({ message }: { message: string; }) {
+function InputCheckbox(props: { name: string; title: string; center?: boolean; onChange: ChangeEventHandler; }) {
+  const classes = 'input input-checkbox' + (props.center ? ' center' : '');
   return (
-    <div className="error-screen">
-      <h3>There was an error</h3>
-      <p>{ message }</p>
+    <div className={classes}>
+      <input type='checkbox' name={props.name} onChange={props.onChange} />
+      <label>{props.title}</label>
     </div>
   );
 }
 
-export default MainContainerRightError;
+export default InputCheckbox;

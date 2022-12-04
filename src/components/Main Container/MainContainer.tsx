@@ -15,7 +15,7 @@
 type Elements = ReactNode | ReactNode[];
 
 import { ReactNode } from 'react';
-import '../css/MainContainer.scss';
+import '../../css/MainContainer.scss';
 
 function MainContainer(props: { right?: Elements; left?: Elements; children?: Elements; }) {
   let children = props.children;

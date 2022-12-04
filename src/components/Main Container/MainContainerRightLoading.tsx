@@ -12,16 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import { ChangeEventHandler } from 'react';
+import '../../css/MainContainerRight.scss';
 
-function Checkbox(props: { name: string; title: string; center?: boolean; onChange: ChangeEventHandler; }) {
-  const classes = 'input input-checkbox' + (props.center ? ' center' : '');
+function MainContainerRightLoading({ loadingMessage }: { loadingMessage: string; }) {
   return (
-    <div className={classes}>
-      <input type='checkbox' name={props.name} onChange={props.onChange} />
-      <label>{props.title}</label>
+    <div className="error-screen">
+      <h3>{ loadingMessage }</h3>
+      <img src="/loading.gif" alt="Loading GIF" />
     </div>
   );
 }
 
-export default Checkbox;
+export default MainContainerRightLoading;

@@ -42,12 +42,12 @@ type LoginValues = {
 import { Component } from 'react';
 import { Formik, FormikErrors } from 'formik';
 import AuthBox from '../components/AuthBox';
-import InputField from '../components/InputField';
+import InputField from '../components/Input/InputField';
 import '../css/AuthBox.scss';
 import '../css/AuthMenus.scss';
 import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
-import Checkbox from '../components/Checkbox';
+import Checkbox from '../components/Input/InputCheckbox';
 import ErrorMessage from '../components/ErrorMessage';
 import * as util from '../scripts/util';
 

@@ -13,7 +13,7 @@
  * either express or implied limitations under the License.
  */
 import { ChangeEventHandler, ReactElement } from 'react';
-import '../css/Input.scss';
+import '../../css/Input.scss';
 
 function InputDropdown(props: {
   name: string;

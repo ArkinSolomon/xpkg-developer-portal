@@ -13,7 +13,7 @@
  * either express or implied limitations under the License.
  */
 import { ChangeEventHandler } from 'react';
-import '../css/Input.scss';
+import '../../css/Input.scss';
 
 function InputField(props: {
   name: string;

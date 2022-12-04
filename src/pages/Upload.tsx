@@ -40,10 +40,10 @@ type UploadValues = {
 
 import { Formik, FormikErrors } from 'formik';
 import { Component, ReactNode } from 'react';
-import InputDropdown from '../components/InputDropdown';
-import InputField from '../components/InputField';
-import MainContainer from '../components/MainContainer';
-import MainContainerRight from '../components/MainContainerRight';
+import InputDropdown from '../components/Input/InputDropdown';
+import InputField from '../components/Input/InputField';
+import MainContainer from '../components/Main Container/MainContainer';
+import MainContainerRight from '../components/Main Container/MainContainerRight';
 import ErrorMessage from '../components/ErrorMessage';
 import '../css/Upload.scss';
 import { postCB } from '../scripts/http';

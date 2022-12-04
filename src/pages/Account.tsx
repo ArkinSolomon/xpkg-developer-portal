@@ -58,14 +58,14 @@ type NameChangeValues = {
 }
 
 import { Component, ReactElement } from 'react';
-import MainContainer from '../components/MainContainer';
+import MainContainer from '../components/Main Container/MainContainer';
 import '../css/Account.scss';
 import 'reactjs-popup/dist/index.css';
 import * as tokenStorage from '../scripts/tokenStorage';
 import { postCB } from '../scripts/http';
 import * as util from '../scripts/util';
-import MainContainerRight from '../components/MainContainerRight';
-import InputField from '../components/InputField';
+import MainContainerRight from '../components/Main Container/MainContainerRight';
+import InputField from '../components/Input/InputField';
 import { Formik, FormikErrors } from 'formik';
 import * as SB from '../components/SideBar';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';

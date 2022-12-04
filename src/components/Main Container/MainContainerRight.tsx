@@ -13,7 +13,7 @@
  * either express or implied limitations under the License.
  */
 import { ReactElement } from 'react';
-import '../css/MainContainerRight.scss';
+import '../../css/MainContainerRight.scss';
 
 function MainContainerRight(props: { title: string; children: ReactElement; }) {
   return (

@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import MainContainer from '../components/MainContainer';
+import MainContainer from '../components/Main Container/MainContainer';
 import '../css/NotFound.scss';
 
 function NotFound() {

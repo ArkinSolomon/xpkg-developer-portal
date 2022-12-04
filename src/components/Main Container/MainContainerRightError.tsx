@@ -12,15 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import '../css/MainContainerRight.scss';
+import '../../css/MainContainerRight.scss';
 
-function MainContainerRightLoading({ loadingMessage }: { loadingMessage: string; }) {
+function MainContainerRightError({ message }: { message: string; }) {
   return (
     <div className="error-screen">
-      <h3>{ loadingMessage }</h3>
-      <img src="/loading.gif" alt="Loading GIF" />
+      <h3>There was an error</h3>
+      <p>{ message }</p>
     </div>
   );
 }
 
-export default MainContainerRightLoading;
+export default MainContainerRightError;
