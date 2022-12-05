@@ -147,13 +147,42 @@ class Create extends Component {
         }) => {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
           const errorMessageActive = (this.state as CreateState).errorMessage !== '';
+
+          const sharedAttributes = {
+            center: true,
+            width: '80%' ,
+            onChange: handleChange
+          };
+
+          const emailFieldData = {
+            name: 'email',
+            title: 'Email' 
+          };
+
+          const nameFieldData = {
+            name:'name',
+            title:'Name'
+          };
+          
+          const passwordFieldData = {
+            name: 'password',
+            title: 'Password',
+            type: 'password'
+          };
+
+          const checkPasswordFieldData = {
+            name: 'checkPassword',
+            title: 'Re-enter Password',
+            type: 'password'
+          };
+
           return (
             <AuthBox title='Create Account' onSubmit={handleSubmit} isSubmitting={isSubmitting} submitEnabled={!errorMessageActive && !(this.state as CreateState).invalidForm}>
               <ErrorMessage text={(this.state as CreateState).errorMessage} show={errorMessageActive} width='80%' center={true} />
-              <InputField name='email' title='Email' center={true} width='80%' onChange={handleChange} />
-              <InputField name='name' title='Name' center={true} width='80%' onChange={handleChange} />
-              <InputField name='password' title='Password' center={true} width='80%' type='password' onChange={handleChange} />
-              <InputField name='checkPassword' title='Re-enter Password' center={true} width='80%' type='password' onChange={handleChange} />
+              <InputField  {...sharedAttributes} {...emailFieldData} />
+              <InputField {...sharedAttributes} {...nameFieldData}/>
+              <InputField  {...sharedAttributes} {...passwordFieldData}/>
+              <InputField  {...sharedAttributes} {...checkPasswordFieldData}/>
               <Checkbox name='rememberMe' title='Remember Me' center={true} onChange={handleChange} />
               <Checkbox name='agree' title='I agree to the privacy policy' center={true} onChange={handleChange} />
               <div className="help-links">

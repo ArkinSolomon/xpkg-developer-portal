@@ -255,17 +255,19 @@ class Account extends Component {
           handleSubmit,
           isSubmitting
         }) => {
+          const nameChangeFieldData = {
+            name: 'name',
+            title: 'Name',
+            placeholder: this.state.accountData.name,
+            width: '30%',
+            defaultValue: this.state.accountData.name,
+            onChange: handleChange
+          };
+
           return (
             <MainContainerRight title="Basic Information">
               <form className="account-form" onSubmit={handleSubmit}>
-                <InputField
-                  name="name"
-                  title="Name"
-                  placeholder={this.state.accountData.name}
-                  width="30%"
-                  defaultValue={this.state.accountData.name}
-                  onChange={handleChange}
-                />
+                <InputField {...nameChangeFieldData} />
                 <input
                   type="submit"
                   value="Change"

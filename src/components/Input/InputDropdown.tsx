@@ -29,7 +29,7 @@ function InputDropdown(props: {
   const classes = 'input input-dropdown' + (props.center ? ' center' : '') + ' ' + (propsClasses ?? []).join(' ');
 
   let defaultValue;
-  for (const [value, displayVal] of Object.entries(props.items)) {
+  for (const [value, displayVal] of Object.entries(props.items).sort((a, b) => a[1].localeCompare(b[1]))) {
     if (!defaultValue)
       defaultValue = value;
       

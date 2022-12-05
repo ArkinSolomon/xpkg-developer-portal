@@ -15,7 +15,12 @@
 import { ChangeEventHandler } from 'react';
 import '../../css/Input.scss';
 
-function InputCheckbox(props: { name: string; title: string; center?: boolean; onChange: ChangeEventHandler; }) {
+function InputCheckbox(props: {
+  name: string;
+  title: string;
+  center?: boolean;
+  onChange: ChangeEventHandler;
+}) {
   const classes = 'input input-checkbox' + (props.center ? ' center' : '');
   return (
     <div className={classes}>

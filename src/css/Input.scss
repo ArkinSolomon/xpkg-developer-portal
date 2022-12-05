@@ -19,6 +19,15 @@
   margin-top: 15px;
   font-family: $noto-sans;
   display: block;
+
+  .max-len-counter {
+    margin-top: 3px;
+    float: right;
+
+    .error {
+      color: $error-red;
+    }
+  }
 }
 
 .input-field {
@@ -73,12 +82,34 @@
 
   label {
     display: block;
-    margin-bottom: 11px;
+    margin-bottom: 10px;
   }
 
   // &.center {
   // Not implemented
   // }
+}
+
+.input-area {
+
+  margin-top: 0;
+
+  textarea {
+    border-radius: 5px;
+    border: 1px solid $light-gray;
+
+    margin-top: 11px;
+    font-size: 13pt;
+
+    width: 100%;
+    resize: none;
+
+    height: 13pt;
+  }
+
+  label {
+    display: block;
+  }
 }
 
 .input-field,

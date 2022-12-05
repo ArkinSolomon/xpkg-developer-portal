@@ -133,6 +133,24 @@ class Login extends Component {
         }) => {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
           const errorMessageActive = (this.state as LoginState).errorMessage !== '';
+
+          const emailFieldData = {
+            name: 'email',
+            title: 'Email',
+            center: true,
+            width: '80%',
+            onChange: handleChange
+          };
+
+          const passwordFieldData = {
+            name: 'password',
+            title: 'Password',
+            center: true,
+            width: '80%',
+            type: 'password',
+            onChange: handleChange
+          };
+
           return (
             <AuthBox
               title='Login'
@@ -146,21 +164,8 @@ class Login extends Component {
                 width='80%'
                 center={true}
               />
-              <InputField
-                name='email'
-                title='Email'
-                center={true}
-                width='80%'
-                onChange={handleChange}
-              />
-              <InputField
-                name='password'
-                title='Password'
-                center={true}
-                width='80%'
-                type='password'
-                onChange={handleChange}
-              />
+              <InputField {...emailFieldData} />
+              <InputField {...passwordFieldData} />
               <Checkbox
                 name='rememberMe'
                 title='Remember Me'
