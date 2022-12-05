@@ -56,6 +56,10 @@ import InputArea from '../components/Input/InputArea';
 // Compute the default option
 const packageTypes = {
   aircraft: 'Aircraft',
+  scenery: 'Scenery',
+  plugin: 'Plugin',
+  livery: 'Livery',
+  executable: 'Executable',
   other: 'Other'
 };
 const defaultPackage = Object.entries(packageTypes).sort((a, b) => a[1].localeCompare(b[1]))[0][0];
@@ -159,7 +163,7 @@ class Upload extends Component {
                         profane_name: 'Do not use profanity in package name, contact support if you believe this is in error',
                         profane_desc: 'Do not use profanity in description, contact support if you believe this is in error',
                         id_in_use: 'Package identifier already in use',
-                        name_in_use: 'Package name already in use',
+                        name_in_use: 'Package name already in use'
                       }[resp.responseText]
                         ?? ('Unkown issue with form: ' + resp.responseText)
                     } as UploadState);

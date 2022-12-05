@@ -55,6 +55,27 @@
   input {
     display: inline-block;
     margin-right: 8px;
+
+    appearance: none;
+    background-color: white;
+
+    margin: 0;
+    margin-right: 3px;
+
+    border: 0.15em solid $light-gray;
+
+    width: 1.4em;
+    height: 1.4em;
+
+    border-radius: 0.2em;
+    transform: translateY(0.25em);
+
+    &:checked {
+      background-image: url('../../public/checkmark.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+    }
   }
 
   &.center {
@@ -75,7 +96,7 @@
     border: 1px solid $light-gray;
 
     padding: 0 10px;
-    
+
     font-size: 11pt;
     background: url('../../public/dropdown-arrow.png') 96% / 15% no-repeat white;
   }
