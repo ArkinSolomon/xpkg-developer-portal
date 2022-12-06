@@ -88,11 +88,11 @@ class Upload extends Component {
     const errors = {} as UploadState['errors'];
 
     if (packageId.length < 6)
-      errors.packageId = 'Package id too short';
+      errors.packageId = 'Package identifier too short';
     else if (packageId.length > 32)
-      errors.packageId = 'Package id too short';
+      errors.packageId = 'Package identifier too short';
     else if (!/^[a-z0-9_.]+$/i.test(packageId)) 
-      errors.packageId = 'Package id has invalid characters';
+      errors.packageId = 'Package identifier has invalid characters';
       
     if (packageName.length < 3)
       errors.packageName = 'Package name too short';
@@ -105,7 +105,7 @@ class Upload extends Component {
       errors.description = 'Description too long';
     
     if (initialVersion.length < 1)
-      errors.initialVersion = 'Version string must be provided';
+      errors.initialVersion = 'Version string required';
     else if (initialVersion.length > 15)
       errors.initialVersion = 'Version string too long';
     else if (!isVersionValid(initialVersion))
@@ -131,7 +131,7 @@ class Upload extends Component {
               packageId: '',
               packageType: '',
               description: '',
-              initialVersion: ''
+              initialVersion: '1.0.0'
             } as UploadValues}
             onSubmit={
               (values, { setSubmitting }) => {
@@ -211,7 +211,8 @@ class Upload extends Component {
                 width: '35%',
                 minLength: 3,
                 maxLength: 32,
-                onChange: handleChange
+                onChange: handleChange,
+                error: this.state.errors.packageName
               } as InputFieldProps;
 
               const packageIdData = {
@@ -221,7 +222,8 @@ class Upload extends Component {
                 minLength: 6,
                 maxLength: 32,
                 width: '35%',
-                onChange: handleChange
+                onChange: handleChange,
+                error: this.state.errors.packageId
               } as InputFieldProps;
               
               const descTextAreaData = {
@@ -229,16 +231,19 @@ class Upload extends Component {
                 title: 'Description',
                 minLength: 10,
                 maxLength: 8192,
-                onChange: handleChange
+                onChange: handleChange,
+                error: this.state.errors.description
               } as InputAreaProps;
 
               const initialVersionField = {
                 name: 'initialVersion',
-                title: 'Intitial version',
+                title: 'Intitial Version',
                 placeholder: 'x.x.x',
                 minLength: 1,
                 maxLength: 15,
-                defaultValue: '1.0.0'
+                width: '25%',
+                defaultValue: '1.0.0',
+                error: this.state.errors.initialVersion
               } as InputFieldProps;
 
               return (
@@ -256,11 +261,11 @@ class Upload extends Component {
                         onChange={handleChange}
                       />
                     </div>
-                    <div className='upload-input-section'>
+                    <div className='upload-input-section top-margin bottom-margin'>
                       <InputArea {...descTextAreaData} />
                     </div>
                     <div className='upload-input-section top-margin'>
-                      <h2>Initial Package Version</h2>
+                      <h2>Initial Package Release</h2>
                       <InputField {...initialVersionField} />
                     </div>
                     <div className='upload-input-section'>

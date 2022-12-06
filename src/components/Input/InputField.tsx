@@ -41,6 +41,7 @@ export type InputFieldProps = {
   classes?: string | string[];
   maxLength?: number;
   minLength?: number;
+  error?: string;
 };
 
 /**
@@ -87,8 +88,22 @@ class InputField extends Component {
   render() {
     const props = this.props as InputFieldProps;
 
-    const propsClasses = props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[];
-    const classes = 'input input-field' + (props.center ? ' center' : '') + ' ' + (propsClasses ?? []).join(' ');
+    const lengthError = this.state.currentLength < (props.minLength ?? -1) ||
+      this.state.currentLength > (props.maxLength ?? Infinity);
+    
+    const hasError = props.error || lengthError;
+
+    // Copy the array of classes, guarantee existence
+    let propsClasses: string[] | null = (props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[]);
+    propsClasses ??= [];
+    propsClasses = [...propsClasses];
+
+    if (hasError)
+      propsClasses.push('error-outline');
+    if (props.center)
+      propsClasses.push('center');
+
+    const classes = 'input input-field ' + propsClasses.join(' ');
     const width = props.width ?? '120px';
     const type = props.type ?? 'text';
 
@@ -103,14 +118,13 @@ class InputField extends Component {
           defaultValue={props.defaultValue}
           onChange={props.onChange}
         />
+        {props.error && 
+          <p className='error error-text'>
+            {props.error}
+          </p>
+        }
         {(props.maxLength || props.minLength) && <p className='max-len-counter'>
-          <span
-            className={
-              this.state.currentLength < (props.minLength ?? -1) ||
-                this.state.currentLength > (props.maxLength ?? Infinity)
-                ? 'error' : ''
-            }
-          >
+          <span className={lengthError ? 'error' : void(0)}>
             {this.state.currentLength}
           </span>
           /{props.maxLength}</p>}

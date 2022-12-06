@@ -22,6 +22,7 @@
  * @property {number} [maxLength] The maximum length of the value of the text area.
  * @property {number} [minLength] The minimum length of the value of the text area.
  * @property {ChangeEventHandler} [onChange] The function to run on the change of the text area.
+ * @property {string} [error] Any error with the text area.
  */
 export type InputAreaProps = {
   name: string;
@@ -29,6 +30,7 @@ export type InputAreaProps = {
   maxLength?: number;
   minLength?: number;
   onChange?: ChangeEventHandler;
+  error?: string;
 };
 
 /**
@@ -75,8 +77,9 @@ class InputArea extends Component {
 
   render() {
     const props = this.props as InputAreaProps;
+
     return (
-      <div className='input input-area'>
+      <div className={'input input-area ' + (props.error ? 'error-outline' : '')}>
         <label htmlFor={props.name}>{props.title}</label>
         <textarea
           className='input-area-element'
@@ -84,6 +87,11 @@ class InputArea extends Component {
           placeholder={props.title}
           onChange={props.onChange}
         />
+        {props.error && 
+          <p className='error error-text'>
+            {props.error}
+          </p>
+        }
         {(props.maxLength || props.minLength) && <p className='max-len-counter'>
           <span
             className={

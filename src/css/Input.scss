@@ -19,14 +19,22 @@
   margin-top: 15px;
   font-family: $noto-sans;
   display: block;
+  position: relative;
+
+  .error {
+    color: $error-red;
+  }
 
   .max-len-counter {
-    margin-top: 3px;
-    float: right;
+    transform: translateY(3px);
+    position: absolute;
+    right: 0;
+  }
 
-    .error {
-      color: $error-red;
-    }
+  .error-text {
+    transform: translateY(3px);
+    position: absolute;
+    left: 0;
   }
 }
 
@@ -41,10 +49,12 @@
     display: block;
     border-radius: 5px;
     border: 1px solid $light-gray;
-    height: 18pt;
+
     padding-left: 4px;
     margin-top: 8px;
     font-size: 11pt;
+
+    height: 18pt;
     width: 100%;
   }
 }
@@ -113,8 +123,6 @@
 
 .input-area {
 
-  margin-top: 0;
-
   textarea {
     border-radius: 5px;
     border: 1px solid $light-gray;
@@ -137,4 +145,21 @@
 .input-dropdown label {
   margin-left: 1px;
   font-size: 12pt;
+}
+
+.input-field,
+.input-area {
+
+  input,
+  textarea {
+    transition: border .1s;
+  }
+
+  &.error-outline {
+
+    input,
+    textarea {
+      border: 1px solid $error-red;
+    }
+  }
 }
