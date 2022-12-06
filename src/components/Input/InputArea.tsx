@@ -22,7 +22,7 @@
  * @property {number} [maxLength] The maximum length of the value of the text area.
  * @property {number} [minLength] The minimum length of the value of the text area.
  * @property {ChangeEventHandler} [onChange] The function to run on the change of the text area.
- * @property {string} [error] Any error with the text area.
+ * @property {string} [error] Any error with the text area to display under it.
  */
 export type InputAreaProps = {
   name: string;

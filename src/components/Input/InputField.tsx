@@ -26,8 +26,9 @@
  * @property {string} [type=text] An alternate type of input.
  * @property {ChangeEventHandler} [onChange] The event handler to be passed to the onChange property of the field.
  * @property {string[]} [classes=[]] Additional classes to pass to the wrapping div.
- * @property {number} maxLength The maximum length of the value in the field.
- * @property {number} minLength The minimum length of the value in the field.
+ * @property {number} [maxLength] The maximum length of the value in the field.
+ * @property {number} [minLength] The minimum length of the value in the field.
+ * @property {string} [error] Any error with the text area to display under it.
  */
 export type InputFieldProps = {
   name: string;
