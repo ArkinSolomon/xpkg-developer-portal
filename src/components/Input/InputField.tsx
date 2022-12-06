@@ -29,7 +29,7 @@
  * @property {number} maxLength The maximum length of the value in the field.
  * @property {number} minLength The minimum length of the value in the field.
  */
-type InputFieldProps = {
+export type InputFieldProps = {
   name: string;
   title: string;
   placeholder?: string;
@@ -50,7 +50,7 @@ type InputFieldProps = {
  * @property {number} currentLength The current length of the value of the item in the text field.
  * @property {string} id The id of the input field, used for jQuery.
  */
- type InputFieldState = {
+type InputFieldState = {
    currentLength: number;
    id: string;
 };
@@ -69,7 +69,7 @@ class InputField extends Component {
     super(props);
 
     this.state = {
-      currentLength: 0,
+      currentLength: (props.defaultValue ?? '').length,
       id: nanoid()
     };
   }

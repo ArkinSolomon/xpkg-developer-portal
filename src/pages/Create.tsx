@@ -55,7 +55,7 @@ import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
 import ErrorMessage from '../components/ErrorMessage';
-import * as util from '../scripts/util';
+import * as util from '../scripts/validators';
 
 class Create extends Component {
   constructor(props: Record<string, never>) {

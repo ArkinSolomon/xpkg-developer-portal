@@ -27,6 +27,7 @@ type UploadValues = {
   packageId: string;
   packageType: string;
   description: string;
+  initialVersion: string;
 };
 
 /**
@@ -44,14 +45,15 @@ type UploadValues = {
 import { Formik, FormikErrors } from 'formik';
 import { Component, ReactNode } from 'react';
 import InputDropdown from '../components/Input/InputDropdown';
-import InputField from '../components/Input/InputField';
+import InputField, { InputFieldProps } from '../components/Input/InputField';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import ErrorMessage from '../components/ErrorMessage';
 import '../css/Upload.scss';
 import { postCB } from '../scripts/http';
 import { checkAuth, delToken } from '../scripts/tokenStorage';
-import InputArea from '../components/Input/InputArea';
+import InputArea, { InputAreaProps } from '../components/Input/InputArea';
+import {isVersionValid} from '../scripts/validators';
 
 // Compute the default option
 const packageTypes = {
@@ -77,9 +79,11 @@ class Upload extends Component {
     };
   }
 
-  validate({ packageName, packageId, description }: UploadValues): FormikErrors<UploadValues> {
+  validate({ packageName, packageId, description, initialVersion }: UploadValues): FormikErrors<UploadValues> {
     packageId = packageId.trim().toLowerCase();
     packageName = packageName.trim();
+    description = description.trim();
+    initialVersion = initialVersion.trim().toLowerCase();
     
     const errors = {} as UploadState['errors'];
 
@@ -100,6 +104,13 @@ class Upload extends Component {
     else if (description.length > 8192)
       errors.description = 'Description too long';
     
+    if (initialVersion.length < 1)
+      errors.initialVersion = 'Version string must be provided';
+    else if (initialVersion.length > 15)
+      errors.initialVersion = 'Version string too long';
+    else if (!isVersionValid(initialVersion))
+      errors.initialVersion = 'Invalid version string';
+    
     this.setState({
       errors,
       uploadError: ''
@@ -119,7 +130,8 @@ class Upload extends Component {
               packageName: '',
               packageId: '',
               packageType: '',
-              description: ''
+              description: '',
+              initialVersion: ''
             } as UploadValues}
             onSubmit={
               (values, { setSubmitting }) => {
@@ -128,12 +140,14 @@ class Upload extends Component {
                 const packageName = values.packageName.trim();
                 const packageType = (values.packageType || defaultPackage).trim().toLowerCase();
                 const description = values.description.trim();
+                const initialVersion = values.initialVersion.trim().toLowerCase();
 
                 postCB('http://localhost:5020/packages/new', {
                   packageId,
                   packageName,
                   packageType,
                   description,
+                  initialVersion,
                   token: checkAuth() as string
                 } as UploadValues & { token: string; } , (err, resp) => {
                   setSubmitting(false);
@@ -198,7 +212,7 @@ class Upload extends Component {
                 minLength: 3,
                 maxLength: 32,
                 onChange: handleChange
-              };
+              } as InputFieldProps;
 
               const packageIdData = {
                 classes: ['package-upload-input'],
@@ -208,15 +222,24 @@ class Upload extends Component {
                 maxLength: 32,
                 width: '35%',
                 onChange: handleChange
-              };
+              } as InputFieldProps;
               
               const descTextAreaData = {
-                name:'description',
+                name: 'description',
                 title: 'Description',
                 minLength: 10,
                 maxLength: 8192,
                 onChange: handleChange
-              };
+              } as InputAreaProps;
+
+              const initialVersionField = {
+                name: 'initialVersion',
+                title: 'Intitial version',
+                placeholder: 'x.x.x',
+                minLength: 1,
+                maxLength: 15,
+                defaultValue: '1.0.0'
+              } as InputFieldProps;
 
               return (
                 <>
@@ -235,6 +258,10 @@ class Upload extends Component {
                     </div>
                     <div className='upload-input-section'>
                       <InputArea {...descTextAreaData} />
+                    </div>
+                    <div className='upload-input-section top-margin'>
+                      <h2>Initial Package Version</h2>
+                      <InputField {...initialVersionField} />
                     </div>
                     <div className='upload-input-section'>
                       <input

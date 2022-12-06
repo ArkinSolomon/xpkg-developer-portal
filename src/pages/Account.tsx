@@ -63,7 +63,7 @@ import '../css/Account.scss';
 import 'reactjs-popup/dist/index.css';
 import * as tokenStorage from '../scripts/tokenStorage';
 import { postCB } from '../scripts/http';
-import * as util from '../scripts/util';
+import * as util from '../scripts/validators';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import InputField from '../components/Input/InputField';
 import { Formik, FormikErrors } from 'formik';
