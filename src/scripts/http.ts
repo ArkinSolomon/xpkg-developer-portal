@@ -27,6 +27,7 @@ export function postCB(url: string, body: Record<string, string>, cb: (err: Prog
   };
   xhttp.onerror = ev => cb(ev, undefined);
   xhttp.open('POST', url, true);
+  // xhttp.setRequestHeader('Content-Type', 'multipart/form-data');
   xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xhttp.send(encodeURIObject(body));
 }
