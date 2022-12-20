@@ -56,7 +56,7 @@ import { postCB } from '../scripts/http';
 import { checkAuth, delToken } from '../scripts/tokenStorage';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import { isVersionValid } from '../scripts/validators';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 // Compute the default option
 const packageTypes = {
@@ -139,7 +139,7 @@ class Upload extends Component {
                 file: void(0)
               } as UploadValues}
               onSubmit={
-                (values, { setSubmitting }) => {
+                async (values, { setSubmitting }) => {
                 
                   const packageId = values.packageId.trim().toLowerCase();
                   const packageName = values.packageName.trim();
@@ -153,65 +153,75 @@ class Upload extends Component {
                   formData.append('packageType', packageType);
                   formData.append('description', description);
                   formData.append('initialVersion', initialVersion);
-                  formData.append('token', checkAuth() as string);
 
-                  // Types are brokne for FormData
+                  // Types are broken for FormData
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formData.append('file', (document.getElementById('package-file') as any).files[0]);
 
-                  axios.post('http://localhost:5020/packages/new', formData)
-                    .then(console.log);
-                  // postCB('http://localhost:5020/packages/new', {
-                  //   packageId,
-                  //   packageName,
-                  //   packageType,
-                  //   description,
-                  //   initialVersion,
-                  //   token: checkAuth() as string
-                  // } as Omit<UploadValues, 'file'> & { token: string; } , (err, resp) => {
-                  //   setSubmitting(false);
-                  //   if (err) {
-                  //     this.setState({
-                  //       uploadError: 'Could not connect to server'
-                  //     });
-                  //     return console.error(err);
-                  //   }
-                  
-                  //   switch (resp?.status) {
-                  //   case 204:
-                  //     window.location.href = '/packages?s=' + encodeURIComponent(btoa('Registered new package successfully'));
-                  //     break;
-                  //   case 400:
-                  //     this.setState({
-                  //       uploadError: {
-                  //         missing_form_data: 'How did you manage this? 0_o',
-                  //         short_id: 'Package identifier is too short',
-                  //         long_id: 'Package identifier is too long',
-                  //         invalid_id: 'Package identifier uses invalid characters',
-                  //         short_name: 'Package name is too short',
-                  //         long_name: 'Package name is too long',
-                  //         short_desc: 'Description is too short',
-                  //         long_desc: 'Description is too long',
-                  //         profane_id: 'Do not use profanity in package identifier, contact support if you believe this is in error',
-                  //         profane_name: 'Do not use profanity in package name, contact support if you believe this is in error',
-                  //         profane_desc: 'Do not use profanity in description, contact support if you believe this is in error',
-                  //         id_in_use: 'Package identifier already in use',
-                  //         name_in_use: 'Package name already in use'
-                  //       }[resp.responseText]
-                  //         ?? ('Unkown issue with form: ' + resp.responseText)
-                  //     } as UploadState);
-                  //     break;
-                  //   case 401:
-                  //     window.location.href = '/';
-                  //     delToken();
-                  //     break;
-                  //   case 500:
-                  //     this.setState({
-                  //       uploadError: 'Internal server error, try again'
-                  //     } as UploadState);
-                  //     break;
-                  //   }
-                  // });
+                  try {
+                    await axios({
+                      url: 'http://localhost:5020/packages/new',
+                      method: 'POST',
+                      data: formData,
+                      headers: {
+                        Authorization: checkAuth() as string
+                      }
+                    });
+                    window.location.href = '/packages?s=' + encodeURIComponent(btoa('Registered new package successfully'));
+                  } catch (e){
+                    if (!(e instanceof AxiosError)) {
+                      this.setState({
+                        uploadError: 'An unkown error occured'
+                      });
+                    } else {
+                      switch (e.response?.status) {
+                      case 400:
+                        this.setState({
+                          uploadError: {
+                            missing_form_data: 'How did you manage this? 0_o',
+                            short_id: 'Package identifier is too short',
+                            long_id: 'Package identifier is too long',
+                            invalid_id: 'Package identifier uses invalid characters',
+                            short_name: 'Package name is too short',
+                            long_name: 'Package name is too long',
+                            short_desc: 'Description is too short',
+                            long_desc: 'Description is too long',
+                            profane_id: 'Do not use profanity in package identifier, contact support if you believe this is in error',
+                            profane_name: 'Do not use profanity in package name, contact support if you believe this is in error',
+                            profane_desc: 'Do not use profanity in description, contact support if you believe this is in error',
+                            id_in_use: 'Package identifier already in use',
+                            name_in_use: 'Package name already in use'
+                          }[e.response?.data as string]
+                            ?? ('Unkown issue with form: ' + e.response?.data as string)
+                        } as Partial<UploadState>);
+                        break;
+                      case 401:
+                        window.location.href = '/';
+                        delToken();
+                        break;
+                      case 422:
+                        this.setState({
+                          uploadError: {
+                            invalid_package: 'The uploaded package is invalid'
+                          }[e.response?.data as string]
+                              ?? ('Unknown issue with uploaded file: ' + e.response?.data)
+                        } as Partial<UploadState>);
+                        break;
+                      case 500:
+                        this.setState({
+                          uploadError: 'Internal server error, try again'
+                        } as UploadState);
+                        break;
+                      default:
+                        this.setState({
+                          uploadError: 'An unknown error occured'
+                        } as Partial<UploadState>);
+                      }
+                    }
+
+                  } finally {
+                    setSubmitting(false);
+                  }
                 }
               }>
               {({

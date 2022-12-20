@@ -104,7 +104,7 @@ class Account extends Component {
 
     // This request will fire twice in development, during production it'll be fine
     const token = tokenStorage.checkAuth() as string;
-    postCB('http://localhost:5020/account/data', { token }, (err, resp) => {
+    postCB('http://localhost:5020/account/data', token, {}, (err, resp) => {
       if (err || resp?.status !== 200) {
       
         if (resp?.status === 401) {
@@ -200,9 +200,8 @@ class Account extends Component {
                     // Force a rerender of the basic information page to gray out the change button
                   } as AccountState, () => this.updateRendered(this.basicInformation()));
       
-                  postCB('http://localhost:5020/account/changeName', {
+                  postCB('http://localhost:5020/account/changeName', tokenStorage.checkAuth() as string, {
                     newName: this.state.nameValue,
-                    token: tokenStorage.checkAuth() as string
                   }, (err, res) => {
                     if (err)
                       return console.error(err);

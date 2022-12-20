@@ -123,7 +123,7 @@ class Packages extends Component {
 
   componentDidMount(): void {
     const token = tokenStorage.checkAuth() as string;
-    postCB('http://localhost:5020/account/packages', { token }, (err, res) => {
+    postCB('http://localhost:5020/account/packages', token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'

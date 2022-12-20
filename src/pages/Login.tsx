@@ -94,7 +94,7 @@ class Login extends Component {
               errorMessage: ''
             });
             const { email, password } = values;
-            http.postCB('http://localhost:5020/auth/login', { email, password }, (err, r) => {
+            http.postCB('http://localhost:5020/auth/login', void (0), { email, password }, (err, r) => {
               setSubmitting(false);
               if (err)
                 return console.error(err);
