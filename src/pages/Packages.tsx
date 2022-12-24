@@ -14,51 +14,76 @@
  */
 
 /**
- * @enum {PackagePage}
+ * Enumeration of subpages in the packages page.
+ * 
+ * @name PackagePage
+ * @enum {string}
  */
 enum PackagePage {
   PACKAGES,
   RESOURCES
 }
 
-// The following types are the same found in /routes/account.ts on the registry
+/**
+ * Enumeration of all possible package types.
+ * 
+ * @name PackageType
+ * @enum {string}
+ */
+export enum PackageType {
+  Aircraft = 'aircraft',
+  Executable = 'executable',
+  Scenery = 'scenery',
+  Plugin = 'plugin',
+  Livery = 'livery',
+  Other = 'other'
+}
 
 /**
- * The data given from the server for a package version.
+ * The data for a single package which is sent to the client.
  * 
- * @typedef {Object} VersionData
- * @property {string} version The version string.
- * @property {string} hash The hash of the data in the package.
- * @property {boolean} approved True if the package is approved.
- * @property {boolean} published True if the package is published.
- * @property {string} loc The URL from which to download the package.
+ * @typedef {Object} PackageData
+ * @property {string} packageId The identifier of the package.
+ * @property {string} packageName The name of the package.
+ * @property {string} authorId The id of the author that uploaded the package.
+ * @property {string} authorName The name of the author that uploaded the package.
+ * @property {string} description The description of the package.
+ * @property {PackageType} packageType The type of the package.
+ * @property {VersionData[]} versions The version data of the package;
  */
-type VersionData = {
-  version: string;
-  hash: string;
-  approved: boolean;
-  publishd: boolean;
-  loc: string;
+export type PackageData = {
+  packageId: string;
+  packageName: string;
+  authorId: string;
+  authorName: string;
+  description: string;
+  packageType: PackageType;
+  versions: VersionData[]
 };
 
 /**
- * The data given from the server for a single package.
+ * The data for a specific version of a package.
  * 
- * @typedef {Object} PackageData
- * @property {string} packageId The id of the package.
- * @property {string} packageName The name of the package.
- * @property {string} packageDescription The description of the package.
- * @property {number} installs The number of installations the package has.
- * @property {string} packageType The type of the package.
- * @property {VersionData[]} versions The versions of the package.
+ * @typedef {Object} VersionData
+ * @property {string} packageId The identifier of the package.
+ * @property {string} version The semantic version string of the package.
+ * @property {string} hash The hexadecimal hash of the package files.
+ * @property {boolean} approved True if the version is approved.
+ * @property {boolean} published True if the version has been published.
+ * @property {boolean} private True if the version will be published later.
+ * @property {string} loc The URL from which to download the package version.
+ * @property {number} installs The number of installs for this version.
  */
-type PackageData = {
+export type VersionData = {
   packageId: string;
-  packageName: string;
-  packageDescription: string;
-  installs: number;
-  packageType: string;
-  versions: VersionData[];
+  version: string;
+  hash: string;
+  approved: boolean;
+  published: boolean;
+  private: boolean;
+  loc: string;
+  privateKey: string;
+  installs: string;
 };
 
 /**
@@ -83,7 +108,7 @@ type PackagesState = {
   };
 }
 
-import { Component, ReactNode } from 'react';
+import { Component, ReactElement, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
@@ -92,6 +117,9 @@ import SideBar from '../components/SideBar';
 import { postCB } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
+import Table from '../components/Table/Table';
+import { nanoid } from 'nanoid';
+import $ from 'jquery';
 
 class Packages extends Component {
 
@@ -142,11 +170,13 @@ class Packages extends Component {
         return this.setState({ errorMessage } as Partial<PackagesState>);
       }
 
-      console.log(res.response);
+      const data = { ...this.state.data };
+      data.packages = JSON.parse(res.response);
 
       this.setState({
         errorMessage: void (0),
-        isLoading: false
+        isLoading: false,
+        data
       } as Partial<PackagesState>);
     });
   }
@@ -177,7 +207,7 @@ class Packages extends Component {
         )}
 
         right={
-          // We wrapp this in a function just to use regular JS stuff
+          // We wrap this in a function just to use regular JS stuff
           ((): ReactNode => {
             if (this.state.errorMessage) {
               return (
@@ -188,6 +218,95 @@ class Packages extends Component {
                 <MainContainerRightLoading loadingMessage='Loading Packages & Resources'/>
               );
             } else if (isPackagePageActive) {
+
+              const columns = {
+                Package: 25,
+                Identifier: 25,
+                'Latest Version': 20,
+                Versions: 10,
+                Description: 15
+              };
+
+              const data = [] as string[][];
+              const subrowData = [] as PackageData[];
+              for (let i = 1; i <= 50; ++i){
+                for (const pkg of this.state.data.packages as PackageData[]) {
+                  data.push([pkg.packageName, pkg.packageId, '000.000.000b' + i, pkg.versions.length.toString(), pkg.description.slice(0, 9) + '...']);
+                  subrowData.push(pkg);
+                }
+              }
+
+              const tableParams = {
+                columns,
+                data,
+                subrowData,
+                subrowRender: (pkg: PackageData): ReactElement => {
+
+                  const versions = [] as ReactElement[];
+                  for (const version of pkg.versions) {
+
+                    versions.push(
+                      <tr key={nanoid()}>
+                        <td>{version.version}</td>
+                        <td>{version.installs}</td>
+                        <td>{version.published ? 'Yes' : 'No'}</td>
+                        <td>{version.private ? 'Yes' : 'No'}</td>
+                        <td>{version.private ? <a className='subtable-link' onClick={e => {
+                          e.preventDefault();
+                          $(e.target).parent().text(version.privateKey);
+                          
+                        }}>Click to reveal</a> : '---'}</td>
+                        <td>{version.private || version.published ? <a className='subtable-link' onClick={e => {
+                          e.preventDefault();
+
+                          // We need this workaround to download as the file name, instead of the gibberish AWS id
+                          const xhr = new XMLHttpRequest();
+                          xhr.open('GET', version.loc, true);
+                          xhr.responseType = 'blob';
+                          xhr.onload = e => {
+                            
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const blob = (e.currentTarget as any).response;
+                            const fileName = `${version.packageId}@${version.version}.xpkg`;
+                            saveBlob(blob, fileName);
+                          };
+                          xhr.send();
+                        }}>Download</a> : '---'}</td>
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <div className='package-subrow'>
+                      <h2>{pkg.packageName}</h2>
+                      <h3>{pkg.packageId}</h3>
+                      
+                      <button className='upload-button'>Edit</button>
+
+                      <p className='package-description'>{pkg.description.length > 1024 ? pkg.description.substring(0, 1024) + '...' : pkg.description}</p>
+                      
+                      <div className='subtable-wrapper'>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Version</th>
+                              <th>Installs</th>
+                              <th>Published</th>
+                              <th>Private</th>
+                              <th>Private Key</th>
+                              <th>Download</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {versions}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                }
+              };
+
               return (
 
                 // Packages page
@@ -195,10 +314,11 @@ class Packages extends Component {
                   <>
                     {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
                     <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
+
+                    <Table {...tableParams} />
                   </>
 
                 </MainContainerRight>
-
               );
             } else {
               return (
@@ -214,6 +334,13 @@ class Packages extends Component {
       />
     );
   }
+}
+
+function saveBlob(blob: Blob, fileName: string) {
+  const a = document.createElement('a');
+  a.href = window.URL.createObjectURL(blob);
+  a.download = fileName;
+  a.dispatchEvent(new MouseEvent('click'));
 }
 
 export default Packages;

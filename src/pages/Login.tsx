@@ -105,7 +105,7 @@ class Login extends Component {
                 let message = 'An unknown error occured';
                 const errors: Record<number, string> = {
                   400: 'Bad request',
-                  403: 'Invalid username/password combination',
+                  401: 'Invalid username/password combination',
                   500: 'Internal server error'
                 };
                 if (Object.hasOwnProperty.call(errors, resp.status))

@@ -28,7 +28,6 @@ export function postCB(url: string, authorization: string|undefined, body: Recor
   };
   xhttp.onerror = ev => cb(ev, undefined);
   xhttp.open('POST', url, true);
-  // xhttp.setRequestHeader('Content-Type', 'multipart/form-data');
   if (authorization)
     xhttp.setRequestHeader('Authorization', authorization);
   xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
