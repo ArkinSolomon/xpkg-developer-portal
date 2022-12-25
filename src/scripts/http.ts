@@ -53,6 +53,26 @@ export async function post(url: string, authorization: string|undefined, body: R
 }
 
 /**
+ * Download a file from a URL and save it with a specific name.
+ * 
+ * @param {string} url The URL to download.
+ * @param {string} fileName The file name to save as
+ */
+export function downloadFile(url: string, fileName: string) {
+  // We need this workaround to download as the file name, instead of the gibberish AWS id
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.responseType = 'blob';
+  xhr.onload = e => {
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blob = (e.currentTarget as any).response;
+    saveBlob(blob, fileName);
+  };
+  xhr.send();
+}
+
+/**
  * Encode an object as URI components.
  * 
  * @param {Record<string, string>} obj The object to encode.
@@ -63,4 +83,17 @@ function encodeURIObject(obj: Record<string, string>): string {
   for (const [k, v] of Object.entries(obj))
     retStr += encodeURIComponent(k) + '=' + encodeURIComponent(v) + '&';
   return retStr.length === 0 ? '' : retStr.slice(0, -1);
+}
+
+/**
+ * Save an XHR blob to the local machine.
+ * 
+ * @param {Blob} blob The blob to save.
+ * @param {string} fileName The name of the file to save as.
+ */
+function saveBlob(blob: Blob, fileName: string) {
+  const a = document.createElement('a');
+  a.href = window.URL.createObjectURL(blob);
+  a.download = fileName;
+  a.dispatchEvent(new MouseEvent('click'));
 }

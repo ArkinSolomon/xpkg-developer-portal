@@ -29,6 +29,7 @@
  * @property {number} [maxLength] The maximum length of the value in the field.
  * @property {number} [minLength] The minimum length of the value in the field.
  * @property {string} [error] Any error with the text area to display under it.
+ * @property {boolean} [readonly] True if the field should be readonly.
  */
 export type InputFieldProps = {
   name: string;
@@ -43,6 +44,7 @@ export type InputFieldProps = {
   maxLength?: number;
   minLength?: number;
   error?: string;
+  readonly?: boolean;
 };
 
 /**
@@ -74,16 +76,29 @@ class InputField extends Component {
       currentLength: (props.defaultValue ?? '').length,
       id: nanoid()
     };
+
+    console.log((props));
   }
 
   componentDidMount(): void {
     const setState = this.setState.bind(this);
+
     $(`#${this.state.id}`).on('input', function () {
       const currentLength = ($(this).val() as string).length;
       setState({
         currentLength
       } as InputFieldState);
     });
+  }
+
+  componentDidUpdate(): void {
+    const currentLength = ($(`#${this.state.id}`).val() as string).length;
+    if (currentLength === this.state.currentLength)
+      return;
+    
+    this.setState({
+      currentLength
+    } as InputFieldState);
   }
 
   render() {
@@ -103,7 +118,9 @@ class InputField extends Component {
       propsClasses.push('error-outline');
     if (props.center)
       propsClasses.push('center');
-
+    if (props.readonly)
+      propsClasses.push('input-readonly');
+    
     const classes = 'input input-field ' + propsClasses.join(' ');
     const width = props.width ?? '120px';
     const type = props.type ?? 'text';
@@ -118,6 +135,7 @@ class InputField extends Component {
           placeholder={props.placeholder ?? props.title}
           defaultValue={props.defaultValue}
           onChange={props.onChange}
+          readOnly={props.readonly}
         />
         {props.error && 
           <p className='error error-text'>

@@ -52,7 +52,6 @@ import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import ErrorMessage from '../components/ErrorMessage';
 import '../css/Upload.scss';
-import { postCB } from '../scripts/http';
 import { checkAuth, delToken } from '../scripts/tokenStorage';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import { isVersionValid } from '../scripts/validators';

@@ -23,6 +23,7 @@
  * @property {number} [minLength] The minimum length of the value of the text area.
  * @property {ChangeEventHandler} [onChange] The function to run on the change of the text area.
  * @property {string} [error] Any error with the text area to display under it.
+ * @property {string} [defaultValue] The default value of the input area.
  */
 export type InputAreaProps = {
   name: string;
@@ -31,6 +32,7 @@ export type InputAreaProps = {
   minLength?: number;
   onChange?: ChangeEventHandler;
   error?: string;
+  defaultValue?: string;
 };
 
 /**
@@ -46,25 +48,45 @@ type InputAreaState = {
 import { ChangeEventHandler, Component } from 'react';
 import $ from 'jquery';
 import '../../css/Input.scss';
+import { nanoid } from 'nanoid';
 
 class InputArea extends Component {
 
   state: InputAreaState;
+  private _id: string;
 
   constructor(props: InputAreaProps) {
     super(props);
 
+    this._id = nanoid();
+
     this.state = {
-      currentLength: 0
+      currentLength: (props.defaultValue ?? '').length
     };
+  }
+
+  componentDidUpdate(): void {
+    const setState = this.setState.bind(this);
+    const state = this.state;
+
+    $(`#${this._id}`).each(function () {
+      this.style.height = '0';
+      this.style.height = (this.scrollHeight) + 'px';
+
+      const currentLength = ($(this).val() as string).length;
+      if (currentLength === state.currentLength)
+        return;
+      
+      setState({
+        currentLength
+      } as InputAreaState);
+    });
   }
 
   componentDidMount(): void {
     const setState = this.setState.bind(this);
 
-    $('.input-area-element').each(function () {
-      this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
-    }).on('input', function () {
+    $(`#${this._id}`).on('input', function () {
       this.style.height = '0';
       this.style.height = (this.scrollHeight) + 'px';
 
@@ -82,6 +104,8 @@ class InputArea extends Component {
       <div className={'input input-area ' + (props.error ? 'error-outline' : '')}>
         <label htmlFor={props.name}>{props.title}</label>
         <textarea
+          id={this._id}
+          defaultValue={props.defaultValue}
           className='input-area-element'
           name={props.name}
           placeholder={props.title}

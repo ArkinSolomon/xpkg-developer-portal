@@ -150,6 +150,10 @@
 .input-field,
 .input-area {
 
+  &.input-readonly input {
+    background-color: $disabled-gray;
+  }
+
   input,
   textarea {
     transition: border .1s;

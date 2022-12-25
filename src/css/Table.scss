@@ -13,8 +13,10 @@
  * either express or implied limitations under the License.
  */
 @import "_colors.scss";
+@import "_fonts.scss";
 
-table {
+.xpkg-table {
+  font-family: $noto-sans;
   width: 100%;
 
   thead {
@@ -22,9 +24,13 @@ table {
     background-color: $dark-blue;
   }
 
-  td {
+  tr {
     border-bottom: 1px solid $light-gray;
     box-sizing: border-box;
+
+    &:last-of-type {
+      border-bottom: 1px solid $dark-blue;
+    }
   }
 
   th,

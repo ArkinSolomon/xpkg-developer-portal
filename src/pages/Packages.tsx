@@ -73,6 +73,7 @@ export type PackageData = {
  * @property {boolean} private True if the version will be published later.
  * @property {string} loc The URL from which to download the package version.
  * @property {number} installs The number of installs for this version.
+ * @property {string} uploadDate The upload time of the package as a string.
  */
 export type VersionData = {
   packageId: string;
@@ -84,6 +85,7 @@ export type VersionData = {
   loc: string;
   privateKey: string;
   installs: string;
+  uploadDate: string;
 };
 
 /**
@@ -114,10 +116,11 @@ import MainContainerRight from '../components/Main Container/MainContainerRight'
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
 import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 import SideBar from '../components/SideBar';
-import { postCB } from '../scripts/http';
+import { postCB, downloadFile } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
-import Table from '../components/Table/Table';
+import '../css/SubrowStyles.scss';
+import Table from '../components/Input/Table';
 import { nanoid } from 'nanoid';
 import $ from 'jquery';
 
@@ -160,11 +163,9 @@ class Packages extends Component {
       if (res?.status !== 200) {
         const errorMessage = 'An unknown error occured';
 
-        switch (res?.status) {
-        case 401:
+        if (res?.status === 401) {
           tokenStorage.delToken();
           window.location.href = '/';
-          break;
         }
 
         return this.setState({ errorMessage } as Partial<PackagesState>);
@@ -223,7 +224,7 @@ class Packages extends Component {
                 Package: 25,
                 Identifier: 25,
                 'Latest Version': 20,
-                Versions: 10,
+                Versions: 15,
                 Description: 15
               };
 
@@ -245,12 +246,16 @@ class Packages extends Component {
                   const versions = [] as ReactElement[];
                   for (const version of pkg.versions) {
 
+                    let isApproved = version.approved ? 'Yes' : 'No';
+                    if (!version.private && !version.published)
+                      isApproved = 'N/A';  
+
                     versions.push(
                       <tr key={nanoid()}>
                         <td>{version.version}</td>
                         <td>{version.installs}</td>
+                        <td>{isApproved}</td>
                         <td>{version.published ? 'Yes' : 'No'}</td>
-                        <td>{version.private ? 'Yes' : 'No'}</td>
                         <td>{version.private ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
                           $(e.target).parent().text(version.privateKey);
@@ -258,19 +263,7 @@ class Packages extends Component {
                         }}>Click to reveal</a> : '---'}</td>
                         <td>{version.private || version.published ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
-
-                          // We need this workaround to download as the file name, instead of the gibberish AWS id
-                          const xhr = new XMLHttpRequest();
-                          xhr.open('GET', version.loc, true);
-                          xhr.responseType = 'blob';
-                          xhr.onload = e => {
-                            
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const blob = (e.currentTarget as any).response;
-                            const fileName = `${version.packageId}@${version.version}.xpkg`;
-                            saveBlob(blob, fileName);
-                          };
-                          xhr.send();
+                          downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
                         }}>Download</a> : '---'}</td>
                       </tr>
                     );
@@ -281,7 +274,7 @@ class Packages extends Component {
                       <h2>{pkg.packageName}</h2>
                       <h3>{pkg.packageId}</h3>
                       
-                      <button className='upload-button'>Edit</button>
+                      <button className='subrow-top-right upload-button action-button' onClick={() => window.location.href = '/edit?packageId=' + pkg.packageId}>Edit</button>
 
                       <p className='package-description'>{pkg.description.length > 1024 ? pkg.description.substring(0, 1024) + '...' : pkg.description}</p>
                       
@@ -291,8 +284,8 @@ class Packages extends Component {
                             <tr>
                               <th>Version</th>
                               <th>Installs</th>
+                              <th>Approved</th>
                               <th>Published</th>
-                              <th>Private</th>
                               <th>Private Key</th>
                               <th>Download</th>
                             </tr>
@@ -334,13 +327,6 @@ class Packages extends Component {
       />
     );
   }
-}
-
-function saveBlob(blob: Blob, fileName: string) {
-  const a = document.createElement('a');
-  a.href = window.URL.createObjectURL(blob);
-  a.download = fileName;
-  a.dispatchEvent(new MouseEvent('click'));
 }
 
 export default Packages;

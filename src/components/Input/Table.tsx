@@ -22,7 +22,7 @@
  * @property {T[]} subrowData The data for each subrow when expanded.
  * @property {(T) => ReactElement} subrowRender Render the data for a subrow.
  */
-type TableProps<T> = {
+export type TableProps<T> = {
   columns: Record<string, number>;
   data: string[][];
   subrowData: T[];
@@ -78,7 +78,7 @@ class Table<T> extends Component {
     
     for (const columnName of Object.keys(props.columns)) {
       const percentage = props.columns[columnName];
-      const width = { width: `${.99 * percentage}%` };
+      const width = { width: `${.95 * percentage}%` };
 
       widths.push(width);
       header.push(<th style={width} key={nanoid()}>{columnName}</th>);
@@ -110,7 +110,7 @@ class Table<T> extends Component {
     }
 
     return (
-      <table>
+      <table className='xpkg-table'>
         <thead>
           <tr>{header}</tr>
         </thead>

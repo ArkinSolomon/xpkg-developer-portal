@@ -24,6 +24,7 @@ import Upload from './pages/Upload';
 import NotFound from './pages/NotFound';
 import Support from './pages/Support';
 import Account from './pages/Account';
+import Edit from './pages/Edit';
 import Footer from './components/Footer';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path='/packages/upload' element={<Upload />} />
         <Route path='/support' element={<Support />} />
         <Route path='/account' element={<Account />} />
+        <Route path='/edit' element={<Edit />} />
         <Route path='*' element={<NotFound />} />
       </Routes>
       <Footer />
