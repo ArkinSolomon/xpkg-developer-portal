@@ -76,8 +76,6 @@ class InputField extends Component {
       currentLength: (props.defaultValue ?? '').length,
       id: nanoid()
     };
-
-    console.log((props));
   }
 
   componentDidMount(): void {

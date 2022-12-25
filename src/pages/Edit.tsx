@@ -21,25 +21,31 @@
  * @property {string} [errorMessage] The error message of the page, or undefined if the page has no error.
  * @property {PackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
  * @property {string} [basicChangeError] An error that occurs with the basic information changing.
- * @property {Object} basicErrors Any errors for the fields in the basic information sub-form.
+ * @property {Object} descriptionErrors Any errors for the fields in the basic information sub-form.
+ * @property {ConfirmPopupConfig} [popupConfig] Configuration for the popup.
+ * @property {boolean} isPopupVisible True if the popup is visible.
+ * @property {boolean} isFormSubmitting True if any form is being submitted.
+ * @property {boolean} isDescriptionOriginal True if the description is the same as the original description.
  */
 type EditState = {
   isLoading: boolean;
   errorMessage?: string;
   currentPackageData?: PackageData;
   basicChangeError?: string;
-  basicErrors: Partial<BasicInformationValues>
+  descriptionErrors: Partial<DescriptionValues>
+  popupConfig?: ConfirmPopupConfig;
+  isPopupVisible: boolean;
+  isFormSubmitting: boolean;
+  isDescriptionOriginal: boolean;
 }
 
 /**
- * Values for the basic editing sub-form.
+ * Values for description modification form.
  * 
- * @typedef {Object} BasicInformationValues
- * @property {string} packageName The name of the package.
+ * @typedef {Object} DescriptionValues
  * @property {string} description The description of the package.
  */
-type BasicInformationValues = {
-  packageName: string;
+type DescriptionValues = {
   description: string;
 }
 
@@ -51,7 +57,7 @@ import MainContainerRight from '../components/Main Container/MainContainerRight'
 import * as tokenStorage from '../scripts/tokenStorage';
 import { downloadFile, postCB } from '../scripts/http';
 import { PackageData, VersionData } from './Packages';
-import { Formik } from 'formik';
+import { Formik, FormikErrors } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import ErrorMessage from '../components/ErrorMessage';
@@ -59,17 +65,23 @@ import '../css/Edit.scss';
 import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Input/Table';
 import $ from 'jquery';
+import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 
 class Edit extends Component {
 
   state: EditState;
+  private _originalDesc: string;
 
   constructor(props: Record<string, never>) {
     super(props);
 
+    this._originalDesc = '';
     this.state = {
       isLoading: true,
-      basicErrors: {}
+      descriptionErrors: {},
+      isPopupVisible: false,
+      isFormSubmitting: false,
+      isDescriptionOriginal: true
     };
 
     const token = tokenStorage.checkAuth();
@@ -78,6 +90,8 @@ class Edit extends Component {
       window.location.href = '/';
       return;
     }   
+
+    this.validateDescription = this.validateDescription.bind(this);
   }
 
   componentDidMount(): void {
@@ -127,6 +141,8 @@ class Edit extends Component {
         });
         return;
       }
+
+      this._originalDesc = currentPackageData.description;
       
       this.setState({
         errorMessage: void (0),
@@ -136,6 +152,23 @@ class Edit extends Component {
     });
   }
 
+  validateDescription({ description }: DescriptionValues): FormikErrors<DescriptionValues> {
+    description = (description ?? '').trim();
+
+    const descriptionErrors: Partial<DescriptionValues> = {};
+    if (description.length < 10)
+      descriptionErrors.description = 'Description too short';
+    else if (description.length > 8192)
+      descriptionErrors.description = 'Description too long';
+    
+    this.setState({
+      descriptionErrors,
+      isDescriptionOriginal: this._originalDesc === description
+    } as EditState);
+    
+    return {};
+  }
+
   render(): ReactNode {
     if (this.state.errorMessage) 
       return (
@@ -143,7 +176,8 @@ class Edit extends Component {
           <MainContainerRightError message={this.state.errorMessage} />
         </MainContainer>
       );
-    else if (this.state.isLoading) 
+    // We keep loading until state is updated
+    else if (this.state.isLoading || !this.state.currentPackageData?.packageId) 
       return (
         <MainContainer>
           <MainContainerRightLoading loadingMessage='Loading Package Information' />
@@ -155,20 +189,98 @@ class Edit extends Component {
           <MainContainerRight title="Edit Package">
             <>
               <Formik
+                validate={this.validateDescription}
+                validateOnChange={true}
+                validateOnMount={true}
                 initialValues={{
-                  packageName: this.state.currentPackageData?.packageName,
                   description: this.state.currentPackageData?.description
-                } as BasicInformationValues}
+                } as DescriptionValues}
                 onSubmit={
-                  async (values, { setSubmitting }) => {
-                    setSubmitting(false);
-                    console.log(values);
+                  async ({description}) => {
+
+                    const popupConfig: ConfirmPopupConfig = {
+                      title: 'Update description', 
+                      confirmText: 'Confirm',
+                      closeText: 'Cancel',
+                      onConfirm: () => {
+                        this.setState({
+                          isFormSubmitting: true
+                        } as EditState); 
+                        
+                        postCB('http://localhost:5020/packages/description', tokenStorage.checkAuth() as string, {
+                          newDescription: description,
+                          packageId: this.state.currentPackageData?.packageId as string
+                        }, (err, res) => {
+                          if (err || res?.status !== 204) {
+                            this.setState({
+                              isFormSubmitting: true
+                            } as EditState);   
+
+                            let errMsg = 'an unknown error occured.';
+                            if (res)
+                              switch (res.status) {
+                              case 401:
+                                tokenStorage.delToken();
+                                sessionStorage.setItem('post-auth-redirect', '/packages');
+                                window.location.href = '/';
+                                break;
+                              case 400:
+                                errMsg = {
+                                  no_desc: 'no description.',
+                                  no_id: 'no package id.',
+                                  invalid_type: 'invalid data type.',
+                                  short_desc: 'description too short.',
+                                  long_desc: 'description too long.',
+                                }[res.responseText]
+                                  ?? `an unknown error occured [${res.responseText}].`;
+                                break;
+                              case 403:
+                                errMsg = 'package not owned.';
+                                break;
+                              case 500:
+                                errMsg = 'internal server error.';
+                                break;
+                              }
+
+                            const popupConfig: ConfirmPopupConfig = {
+                              title: 'Update failed',
+                              showClose: false,
+                              confirmText: 'Ok',
+                              onClose: () => {
+                                this.setState({
+                                  isPopupVisible: false
+                                } as EditState);
+                              },
+                              children: <p className='generic-popup-text'>Could not update description, { errMsg }</p>
+                            };
+
+                            this.setState({
+                              popupConfig,
+                              isPopupVisible: true
+                            } as EditState);
+                          } else 
+                            window.location.href = '/packages?s=' + btoa(`The package description for '${this.state.currentPackageData?.packageName}' (${this.state.currentPackageData?.packageId}) was updated successfully`);
+                        });
+
+                        return;
+                      },
+                      onClose: () => {
+                        this.setState({
+                          isPopupVisible: false
+                        } as EditState);
+                      },
+                      children: <p className='generic-popup-text'>Are you sure you want to modify the description of the package?</p>
+                    };
+
+                    this.setState({
+                      popupConfig,
+                      isPopupVisible: true
+                    } as EditState);
                   }
                 }
               >{({
                   handleChange,
-                  handleSubmit,
-                  isSubmitting
+                  handleSubmit
                 }) => {
 
                   // To be perfectly honest (probably because of the router), I have no idea why these classes are still applying (yes I just copied and pasted this from Upload.tsx, no I don't feel like seperating these forms into individual components)
@@ -177,11 +289,8 @@ class Edit extends Component {
                     name: 'packageName',
                     title: 'Package Name',
                     width: '35%',
-                    minLength: 3,
-                    maxLength: 32,
-                    onChange: handleChange,
+                    readonly: true,
                     defaultValue: this.state.currentPackageData?.packageName,
-                    error: this.state.basicErrors.packageName
                   };
   
                   const packageIdData: InputFieldProps = {
@@ -208,7 +317,7 @@ class Edit extends Component {
                     maxLength: 8192,
                     onChange: handleChange,
                     defaultValue: this.state.currentPackageData?.description,
-                    error: this.state.basicErrors.description
+                    error: this.state.descriptionErrors.description
                   };
 
                   const tableConfig: TableProps<VersionData> = {
@@ -223,7 +332,6 @@ class Edit extends Component {
                     data: [],
                     subrowData: [], 
                     subrowRender: version => {
-                      console.log(version);
                       return (
                         <div className='version-table-subrow'>
                           <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
@@ -270,6 +378,8 @@ class Edit extends Component {
 
                   return (
                     <>
+                      <ConfirmPopup {...this.state.popupConfig as ConfirmPopupConfig} open={this.state.isPopupVisible} />
+                      
                       <ErrorMessage text={this.state.basicChangeError ?? ''} show={!!this.state.basicChangeError} />
                       <form onSubmit={handleSubmit} onChange={handleChange}>
                         <div className='upload-input-section'>
@@ -284,7 +394,7 @@ class Edit extends Component {
                           <input
                             type="submit"
                             value="Update"
-                            disabled={isSubmitting || !!Object.keys(this.state.basicErrors).length}
+                            disabled={this.state.isDescriptionOriginal || this.state.isFormSubmitting || !!Object.keys(this.state.descriptionErrors).length}
                           />
                         </div>
                         <div className='upload-input-section'>

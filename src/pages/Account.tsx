@@ -227,7 +227,7 @@ class Account extends Component {
                           window.location.href = '/';
                         },
                         children: <p className='generic-popup-text'>Your name has been changed successfully. You will be logged out in 5 seconds, or when you press ok.</p>
-                      };
+                      } as ConfirmPopupConfig;
                       
                       tokenStorage.delToken();
                       setTimeout(() => window.location.href = '/', 5000);

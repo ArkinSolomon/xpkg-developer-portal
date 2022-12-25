@@ -230,11 +230,10 @@ class Packages extends Component {
 
               const data = [] as string[][];
               const subrowData = [] as PackageData[];
-              for (let i = 1; i <= 50; ++i){
-                for (const pkg of this.state.data.packages as PackageData[]) {
-                  data.push([pkg.packageName, pkg.packageId, '000.000.000b' + i, pkg.versions.length.toString(), pkg.description.slice(0, 9) + '...']);
-                  subrowData.push(pkg);
-                }
+              
+              for (const pkg of this.state.data.packages as PackageData[]) {
+                data.push([pkg.packageName, pkg.packageId, pkg.versions[0].version, pkg.versions.length.toString(), pkg.description.slice(0, 9) + '...']);
+                subrowData.push(pkg);
               }
 
               const tableParams = {
