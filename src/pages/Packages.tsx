@@ -21,7 +21,8 @@
  */
 enum PackagePage {
   PACKAGES,
-  RESOURCES
+  RESOURCES,
+  REPORTS
 }
 
 /**
@@ -107,6 +108,7 @@ type PackagesState = {
   data: {
     packages?: PackageData[];
     // resources?: Resource[];
+    // bug reports
   };
 }
 
@@ -184,6 +186,7 @@ class Packages extends Component {
 
   render(): ReactNode {
     const isPackagePageActive = this.state.page === PackagePage.PACKAGES;
+    const isResourcesPageActive = this.state.page === PackagePage.RESOURCES;
 
     return (
       <MainContainer
@@ -201,6 +204,13 @@ class Packages extends Component {
               action: () =>
                 this.setState({
                   page: PackagePage.RESOURCES
+                })
+            },
+            {
+              text: 'Bug Reports',
+              action: () =>
+                this.setState({
+                  page: PackagePage.REPORTS
                 })
             }
           ]}
@@ -312,12 +322,20 @@ class Packages extends Component {
 
                 </MainContainerRight>
               );
-            } else {
+            } else if (isResourcesPageActive) {
               return (
 
                 // Resources page
                 <MainContainerRight title='Resources'>
                   <p>Resources</p>
+                </MainContainerRight>
+              );
+            } else {
+              return (
+
+                // Reports page
+                <MainContainerRight title='Bug Reports'>
+                  <p>Reports</p>
                 </MainContainerRight>
               );
             }

@@ -20,24 +20,26 @@
  * @property {boolean} isLoading True if the page is loading.
  * @property {string} [errorMessage] The error message of the page, or undefined if the page has no error.
  * @property {PackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
- * @property {string} [basicChangeError] An error that occurs with the basic information changing.
- * @property {Object} descriptionErrors Any errors for the fields in the basic information sub-form.
+ * @property {Object} descriptionErrors Any errors for the fields in the description update sub-form.
+ * @property {Object} newVersionErrors Any errors for the fields in the new version sub-form.
  * @property {ConfirmPopupConfig} [popupConfig] Configuration for the popup.
  * @property {boolean} isPopupVisible True if the popup is visible.
  * @property {boolean} isFormSubmitting True if any form is being submitted.
  * @property {boolean} isDescriptionOriginal True if the description is the same as the original description.
+ * @property {boolean} showNewVersionForm True if we should show the new version form.
  */
 type EditState = {
   isLoading: boolean;
   errorMessage?: string;
   currentPackageData?: PackageData;
-  basicChangeError?: string;
   descriptionErrors: Partial<DescriptionValues>
+  newVersionErrors: Partial<NewVersionValues>
   popupConfig?: ConfirmPopupConfig;
   isPopupVisible: boolean;
   isFormSubmitting: boolean;
   isDescriptionOriginal: boolean;
-}
+  showNewVersionForm: boolean;
+};
 
 /**
  * Values for description modification form.
@@ -47,7 +49,17 @@ type EditState = {
  */
 type DescriptionValues = {
   description: string;
-}
+};
+
+/**
+ * Values for the version upload form.
+ * 
+ * @typedef {Object} NewVersionValues
+ * @property {string} versionString The version string.
+ */
+type NewVersionValues = {
+  versionString: string;
+};
 
 import { Component, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
@@ -79,9 +91,11 @@ class Edit extends Component {
     this.state = {
       isLoading: true,
       descriptionErrors: {},
+      newVersionErrors: {},
       isPopupVisible: false,
       isFormSubmitting: false,
-      isDescriptionOriginal: true
+      isDescriptionOriginal: true,
+      showNewVersionForm: false
     };
 
     const token = tokenStorage.checkAuth();
@@ -92,6 +106,7 @@ class Edit extends Component {
     }   
 
     this.validateDescription = this.validateDescription.bind(this);
+    this.validateNewVersion = this.validateNewVersion.bind(this);
   }
 
   componentDidMount(): void {
@@ -169,6 +184,10 @@ class Edit extends Component {
     return {};
   }
 
+  validateNewVersion() {
+    return {};
+  }
+
   render(): ReactNode {
     if (this.state.errorMessage) 
       return (
@@ -184,6 +203,65 @@ class Edit extends Component {
         </MainContainer>
       );
     else {
+
+      const tableConfig: TableProps<VersionData> = {
+        columns: {
+          Version: 20,
+          Installs: 13,
+          Approved: 13,
+          Published: 13,
+          Private: 13,
+          'Uploaded Date': 28
+        },
+        data: [],
+        subrowData: [], 
+        subrowRender: version => {
+          return (
+            <div className='version-table-subrow'>
+              <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
+              <p>{version.installs} installs</p>
+              <p>Checksum: {version.hash}</p>
+              {version.private ? <p><a className='subrow-private-key-link' onClick={e => {
+                e.preventDefault();
+                
+                $(e.target).parent().html(`Private key: ${version.privateKey}`);
+              }}>Click to reveal private key</a></p> : void (0)}
+              <div className='subrow-top-right'>
+                {!version.approved && version.private ? <button className='upload-button action-button'>Submit for approval</button> : void (0)}
+                {version.approved && version.private ? <button className='upload-button action-button'>Publish</button> : void (0)}
+                {!version.private && !version.published ? <button className='upload-button action-button' onClick={e => {
+                  e.preventDefault();
+                }}>Upload package</button> : void (0)}
+                {version.published || version.private ? <button className='upload-button action-button' onClick={e => {
+                  e.preventDefault();
+                  downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
+                }}>Download</button> : void (0)}
+              </div>
+            </div>
+          );
+        }
+      };
+
+      if (this.state.currentPackageData){
+        for (const version of this.state.currentPackageData.versions) {
+
+          let isApproved = version.approved ? 'Yes' : 'No';
+          if (!version.private && !version.published)
+            isApproved = 'N/A';  
+
+          tableConfig.data.push([
+            version.version,
+            version.installs,
+            isApproved,
+            version.published ? 'Yes' : 'No',
+            version.private ? 'Yes' : 'No',
+            new Date(version.uploadDate).toLocaleString()
+          ]);
+
+          tableConfig.subrowData.push(version);
+        }
+      }
+
       return (
         <MainContainer>
           <MainContainerRight title="Edit Package">
@@ -302,11 +380,14 @@ class Edit extends Component {
                     width: '35%',
                   };
 
+                  const pkgType = (this.state.currentPackageData?.packageType ?? '  ');
+                  const upercasePkgType = pkgType.charAt(0).toUpperCase() + pkgType.slice(1);
+
                   const packageTypeData: InputFieldProps = {
                     classes: ['package-upload-input', 'right'],
                     name: 'packageType',
                     title: 'Package Type',
-                    defaultValue: this.state.currentPackageData?.packageType,
+                    defaultValue: upercasePkgType,
                     readonly: true
                   };
                 
@@ -320,67 +401,10 @@ class Edit extends Component {
                     error: this.state.descriptionErrors.description
                   };
 
-                  const tableConfig: TableProps<VersionData> = {
-                    columns: {
-                      Version: 20,
-                      Installs: 13,
-                      Approved: 13,
-                      Published: 13,
-                      Private: 13,
-                      'Uploaded Date': 28
-                    },
-                    data: [],
-                    subrowData: [], 
-                    subrowRender: version => {
-                      return (
-                        <div className='version-table-subrow'>
-                          <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
-                          <p>{version.installs} installs</p>
-                          <p>Checksum: {version.hash}</p>
-                          {version.private ? <p><a className='subrow-private-key-link' onClick={e => {
-                            e.preventDefault();
-                            
-                            $(e.target).parent().html(`Private key: ${version.privateKey}`);
-                          }}>Click to reveal private key</a></p> : void (0)}
-                          <div className='subrow-top-right'>
-                            {!version.approved && version.private ? <button className='upload-button action-button'>Submit for approval</button> : void (0)}
-                            {version.approved && version.private ? <button className='upload-button action-button'>Publish</button> : void (0)}
-                            {!version.private && !version.published ? <button className='upload-button action-button'>Upload package</button> : void (0)}
-                            {version.published || version.private ? <button className='upload-button action-button' onClick={e => {
-                              e.preventDefault();
-                              downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
-                            }}>Download</button> : void (0)}
-                          </div>
-                        </div>
-                      );
-                    }
-                  };
-
-                  if (this.state.currentPackageData){
-                    for (const version of this.state.currentPackageData.versions) {
-
-                      let isApproved = version.approved ? 'Yes' : 'No';
-                      if (!version.private && !version.published)
-                        isApproved = 'N/A';  
-
-                      tableConfig.data.push([
-                        version.version,
-                        version.installs,
-                        isApproved,
-                        version.published ? 'Yes' : 'No',
-                        version.private ? 'Yes' : 'No',
-                        new Date(version.uploadDate).toLocaleString()
-                      ]);
-
-                      tableConfig.subrowData.push(version);
-                    }
-                  }
-
                   return (
                     <>
                       <ConfirmPopup {...this.state.popupConfig as ConfirmPopupConfig} open={this.state.isPopupVisible} />
                       
-                      <ErrorMessage text={this.state.basicChangeError ?? ''} show={!!this.state.basicChangeError} />
                       <form onSubmit={handleSubmit} onChange={handleChange}>
                         <div className='upload-input-section'>
                           <InputField {...packageNameData}/>
@@ -397,15 +421,77 @@ class Edit extends Component {
                             disabled={this.state.isDescriptionOriginal || this.state.isFormSubmitting || !!Object.keys(this.state.descriptionErrors).length}
                           />
                         </div>
-                        <div className='upload-input-section'>
-                          <h2>Versions</h2>
-                          <Table {...tableConfig} />
-                        </div>
                       </form>
                     </>
                   );
                 }}
               </Formik>
+
+              <div className='upload-input-section'>
+                <h2>Versions</h2>
+                <Table {...tableConfig} />
+              </div>
+
+              <div className='upload-input-section top-margin'>
+                <Formik
+                  validate={this.validateNewVersion}
+                  validateOnChange={true}
+                  validateOnMount={true}
+                  initialValues={{
+                    versionString: ''
+                  } as NewVersionValues}
+                  onSubmit={
+                    async values => {
+                      console.log(values);
+                    }
+                  }
+                >{({
+                    handleChange,
+                    handleSubmit
+                  }) => {
+
+                    const versionStringField: InputFieldProps = {
+                      name: 'versionString',
+                      title: 'Intitial Version',
+                      placeholder: 'x.x.x',
+                      minLength: 1,
+                      maxLength: 15,
+                      width: '25%',
+                      error: this.state.newVersionErrors.versionString,
+                    };
+
+                    return (
+                      <>
+                        {!this.state.showNewVersionForm && 
+                          <button className='upload-button action-button' onClick={() => this.setState({showNewVersionForm: true} as Partial<EditState>)}>Upload new version</button>
+                        }
+                        {this.state.showNewVersionForm &&
+                          <>
+                            <form onSubmit={handleSubmit} onChange={handleChange}>
+                              <div className='upload-input-section top-margin'>
+                                <h2>Upload a New Version</h2>
+                                <div className='right-half'>
+                                  <InputField {...versionStringField} />
+                                </div>
+                                <div className='left-half'>
+                                  <p>TODO: Upload</p>
+                                </div>
+                              </div>
+                              <div className='upload-input-section relative top-margin'>
+                                <input
+                                  type="submit"
+                                  value="Upload"
+                                  disabled={this.state.isDescriptionOriginal || this.state.isFormSubmitting || !!Object.keys(this.state.descriptionErrors).length}
+                                />
+                              </div>
+                            </form>
+                          </>
+                        }
+                      </>
+                    );
+                  }}
+                </Formik>
+              </div>
             </>
           </MainContainerRight>
         </MainContainer>

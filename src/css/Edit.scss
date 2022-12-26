@@ -39,7 +39,8 @@
     font-size: 14pt;
   }
 
-  p, .subrow-private-key-link {
+  p,
+  .subrow-private-key-link {
     font-size: 12pt;
     line-height: 16pt;
     color: $dark-gray;
@@ -59,5 +60,18 @@ div.subrow-top-right {
   button {
     margin-left: auto;
     display: block;
+  }
+}
+
+.upload-input-section {
+  &>.right-half {
+    display: inline-block;
+    width: 50%;
+  }
+
+  &>.left-half {
+    display: inline-block;
+    margin-left: auto;
+    width: 50%;
   }
 }
