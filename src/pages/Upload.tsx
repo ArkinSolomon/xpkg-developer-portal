@@ -275,7 +275,7 @@ class Upload extends Component {
                 };
 
                 const inputFileProps: InputFileProps = {
-                  label: 'Package',
+                  label: 'Files',
                   name: 'file',
                   types: '.zip',
                   onChange: e => {
@@ -283,7 +283,7 @@ class Upload extends Component {
                       return;
                     this.setState({
                       file: e.target.files[0]
-                    });
+                    } as Partial<UploadState>);
                   }
                 };
 
@@ -312,14 +312,13 @@ class Upload extends Component {
                         </div>
                         <div className='left-half'>
                           <InputFile {...inputFileProps}></InputFile>
-                          {/* <input type="file" id="package-file" name='file' onChange={} /> */}
                         </div>
                       </div>
                       <div className='upload-input-section'>
                         <input
                           type="submit"
                           value="Upload"
-                          disabled={isSubmitting || !!Object.keys(this.state.errors).length}
+                          disabled={!this.state.file || isSubmitting || !!Object.keys(this.state.errors).length}
                         />
                       </div>
                     </form>

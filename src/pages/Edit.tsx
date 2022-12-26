@@ -27,6 +27,7 @@
  * @property {boolean} isFormSubmitting True if any form is being submitted.
  * @property {boolean} isDescriptionOriginal True if the description is the same as the original description.
  * @property {boolean} showNewVersionForm True if we should show the new version form.
+ * @property {File} [newVersionFile] The file uploaded for the new version.
  */
 type EditState = {
   isLoading: boolean;
@@ -39,6 +40,7 @@ type EditState = {
   isFormSubmitting: boolean;
   isDescriptionOriginal: boolean;
   showNewVersionForm: boolean;
+  newVersionFile?: File;
 };
 
 /**
@@ -56,9 +58,11 @@ type DescriptionValues = {
  * 
  * @typedef {Object} NewVersionValues
  * @property {string} versionString The version string.
+ * @property {boolean} isPublic True if the package is public. 
  */
 type NewVersionValues = {
   versionString: string;
+  isPublic: boolean;
 };
 
 import { Component, ReactNode } from 'react';
@@ -72,12 +76,14 @@ import { PackageData, VersionData } from './Packages';
 import { Formik, FormikErrors } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
-import ErrorMessage from '../components/ErrorMessage';
 import '../css/Edit.scss';
 import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Input/Table';
 import $ from 'jquery';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
+import InputFile, { InputFileProps } from '../components/Input/InputFile';
+import { isVersionValid } from '../scripts/validators';
+import InputCheckbox from '../components/Input/InputCheckbox';
 
 class Edit extends Component {
 
@@ -95,7 +101,7 @@ class Edit extends Component {
       isPopupVisible: false,
       isFormSubmitting: false,
       isDescriptionOriginal: true,
-      showNewVersionForm: false
+      showNewVersionForm: true // Set this for easier debugging
     };
 
     const token = tokenStorage.checkAuth();
@@ -184,7 +190,22 @@ class Edit extends Component {
     return {};
   }
 
-  validateNewVersion() {
+  validateNewVersion({ versionString }: NewVersionValues) {  
+    versionString = versionString.trim().toLowerCase();
+
+    const newVersionErrors: Partial<NewVersionValues> = {};
+
+    if (versionString.length < 1)
+      newVersionErrors.versionString = 'Version string required';
+    else if (versionString.length > 15)
+      newVersionErrors.versionString = 'Version string too long';
+    else if (!isVersionValid(versionString))
+      newVersionErrors.versionString = 'Invalid version string';
+
+    this.setState({
+      newVersionErrors
+    } as Partial<EditState>);
+
     return {};
   }
 
@@ -262,6 +283,11 @@ class Edit extends Component {
         }
       }
 
+      const defaultNewVersionValues: NewVersionValues = {
+        versionString: '',
+        isPublic: true
+      };
+
       return (
         <MainContainer>
           <MainContainerRight title="Edit Package">
@@ -327,7 +353,7 @@ class Edit extends Component {
                               onClose: () => {
                                 this.setState({
                                   isPopupVisible: false
-                                } as EditState);
+                                } as Partial<EditState>);
                               },
                               children: <p className='generic-popup-text'>Could not update description, { errMsg }</p>
                             };
@@ -437,12 +463,12 @@ class Edit extends Component {
                   validate={this.validateNewVersion}
                   validateOnChange={true}
                   validateOnMount={true}
-                  initialValues={{
-                    versionString: ''
-                  } as NewVersionValues}
+                  initialValues={defaultNewVersionValues}
                   onSubmit={
-                    async values => {
-                      console.log(values);
+                    async ({versionString, isPublic}) => {
+                      versionString = versionString.trim().toLowerCase();
+
+                      
                     }
                   }
                 >{({
@@ -456,8 +482,21 @@ class Edit extends Component {
                       placeholder: 'x.x.x',
                       minLength: 1,
                       maxLength: 15,
-                      width: '25%',
+                      width: '50%',
                       error: this.state.newVersionErrors.versionString,
+                    };
+
+                    const fileUploadProps: InputFileProps = {
+                      label: 'Files',
+                      name: 'package-file',
+                      types: '.zip',
+                      onChange: e => {
+                        if (!e.target.files?.length)
+                          return;
+                        this.setState({
+                          newVersionFile: e.target.files[0]
+                        } as Partial<EditState>);
+                      }
                     };
 
                     return (
@@ -470,18 +509,21 @@ class Edit extends Component {
                             <form onSubmit={handleSubmit} onChange={handleChange}>
                               <div className='upload-input-section top-margin'>
                                 <h2>Upload a New Version</h2>
-                                <div className='right-half'>
+                                <div className='left-third'>
                                   <InputField {...versionStringField} />
                                 </div>
-                                <div className='left-half'>
-                                  <p>TODO: Upload</p>
+                                <div className='middle-third'>
+                                  <InputCheckbox name="isPublic" title="Public" onChange={handleChange} defaultValue={defaultNewVersionValues.isPublic} /> 
+                                </div>
+                                <div className='right-third'>
+                                  <InputFile {...fileUploadProps} />
                                 </div>
                               </div>
                               <div className='upload-input-section relative top-margin'>
                                 <input
                                   type="submit"
                                   value="Upload"
-                                  disabled={this.state.isDescriptionOriginal || this.state.isFormSubmitting || !!Object.keys(this.state.descriptionErrors).length}
+                                  disabled={!this.state.newVersionFile || this.state.isFormSubmitting || !!Object.keys(this.state.newVersionErrors).length}
                                 />
                               </div>
                             </form>

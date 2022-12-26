@@ -12,17 +12,31 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import { ChangeEventHandler, ReactElement } from 'react';
-import '../../css/Input.scss';
 
-function InputDropdown(props: {
+/**
+ * Props for the input dropdown.
+ * 
+ * @typedef {Object} InputDropdownProps
+ * @property {string} name The name of the field.
+ * @property {string} label The label for the field.
+ * @property {Record<string, string>} items The items of the dropdown, where the key is the value of the field, and the value of the record is the display value.
+ * @property {string[]} [classes] Additional classes for the dropdown wrapping div.
+ * @property {boolean} [center] True if you want to center the item.
+ * @property {ChangeEventHandler} [onChange] The function to call when the value is changed.
+ */
+export type InputDropdownProps = {
   name: string;
   label: string;
   items: Record<string, string>;
   classes?: string[];
   center?: boolean;
   onChange?: ChangeEventHandler;
-}): ReactElement {
+};
+
+import { ChangeEventHandler, ReactElement } from 'react';
+import '../../css/Input.scss';
+
+function InputDropdown(props: InputDropdownProps): ReactElement {
   const items: ReactElement[] = [];
 
   const propsClasses = props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[];

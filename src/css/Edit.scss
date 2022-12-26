@@ -64,14 +64,25 @@ div.subrow-top-right {
 }
 
 .upload-input-section {
-  &>.right-half {
+  &>.left-half {
     display: inline-block;
     width: 50%;
   }
 
-  &>.left-half {
+  &>.right-half {
     display: inline-block;
     margin-left: auto;
     width: 50%;
+  }
+
+  &>.left-third, &>.middle-third {
+    display: inline-block;
+    width: 33%;
+  }
+
+  &>.right-third {
+    display: inline-block;
+    width: 33%;
+    margin-left: auto;
   }
 }

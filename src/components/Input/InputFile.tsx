@@ -41,11 +41,13 @@ import '../../css/Input.scss';
 
 export default function InputFile(props: InputFileProps): JSX.Element {
   let typeString: string | undefined;
+  let accept: string | undefined;
   if (props.types) {
     let types = props.types;
     if (typeof types === 'string')
       types = [types];
     
+    accept = types.join();
     typeString = ` [${types.join(', ')}]`;
   }
 
@@ -55,15 +57,19 @@ export default function InputFile(props: InputFileProps): JSX.Element {
     <div className="input-file">
       <p>{props.label + typeString ?? ''}</p>
       <label className="input">
-        <input type="file" name={props.name} onChange={e => {
-          let fileName = '(no file selected)';
+        <input
+          type="file"
+          name={props.name}
+          accept={accept}
+          onChange={e => {
+            let fileName = '(no file selected)';
 
-          if (e.target.files && e.target.files?.length > 0) 
-            fileName = e.target.files[0].name;
+            if (e.target.files && e.target.files?.length > 0) 
+              fileName = e.target.files[0].name;
           
-          setFileName(fileName);
-          props.onChange(e);
-        }} /> 
+            setFileName(fileName);
+            props.onChange(e);
+          }} /> 
         Upload file
       </label>
       <span>{ fileName }</span>

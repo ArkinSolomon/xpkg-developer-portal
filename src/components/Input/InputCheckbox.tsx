@@ -20,11 +20,12 @@ function InputCheckbox(props: {
   title: string;
   center?: boolean;
   onChange: ChangeEventHandler;
+  defaultValue?: boolean;
 }) {
   const classes = 'input input-checkbox' + (props.center ? ' center' : '');
   return (
     <div className={classes}>
-      <input type='checkbox' name={props.name} onChange={props.onChange} />
+      <input type='checkbox' name={props.name} onChange={props.onChange} defaultChecked={props.defaultValue} />
       <label>{props.title}</label>
     </div>
   );

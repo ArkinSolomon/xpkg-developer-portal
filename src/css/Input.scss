@@ -73,19 +73,35 @@
     margin: 0;
     margin-right: 3px;
 
-    border: 0.15em solid $light-gray;
+    border: 1px solid $light-gray;
+    border-radius: 4px;
 
     width: 1.4em;
     height: 1.4em;
 
-    border-radius: 0.2em;
     transform: translateY(0.25em);
 
     &:checked {
-      background-image: url('../../public/checkmark.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center center;
+      // background-image: url('../../public/checkmark.png');
+      // background-size: cover;
+      // background-repeat: no-repeat;
+      // background-position: center center;
+      background-color: $dark-blue;
+      // border: 2px solid white;
+
+      &:after {
+        content: " ";
+        position: absolute;
+        z-index: 1;
+
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        
+        border: 1px solid $light-gray;
+        border-radius: 4px;
+      }
     }
   }
 
