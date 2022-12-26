@@ -73,7 +73,7 @@ class InputField extends Component {
     super(props);
 
     this.state = {
-      currentLength: (props.defaultValue ?? '').length,
+      currentLength: (props.defaultValue ?? '').trim().length,
       id: nanoid()
     };
   }
@@ -82,7 +82,7 @@ class InputField extends Component {
     const setState = this.setState.bind(this);
 
     $(`#${this.state.id}`).on('input', function () {
-      const currentLength = ($(this).val() as string).length;
+      const currentLength = ($(this).val() as string).trim().length;
       setState({
         currentLength
       } as InputFieldState);
@@ -90,7 +90,7 @@ class InputField extends Component {
   }
 
   componentDidUpdate(): void {
-    const currentLength = ($(`#${this.state.id}`).val() as string).length;
+    const currentLength = ($(`#${this.state.id}`).val() as string).trim().length;
     if (currentLength === this.state.currentLength)
       return;
     

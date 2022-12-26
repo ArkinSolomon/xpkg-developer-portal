@@ -56,6 +56,7 @@ import { checkAuth, delToken } from '../scripts/tokenStorage';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import { isVersionValid } from '../scripts/validators';
 import axios, { AxiosError } from 'axios';
+import InputFile, { InputFileProps } from '../components/Input/InputFile';
 
 // Compute the default option
 const packageTypes = {
@@ -231,7 +232,7 @@ class Upload extends Component {
 
                 // We need this due to TypeScript being weird
                 // https://stackoverflow.com/questions/48240449/type-is-not-assignable-to-type-intrinsicattributes-intrinsicclassattribu
-                const packageNameData = {
+                const packageNameData: InputFieldProps = {
                   classes: ['package-upload-input'],
                   name: 'packageName',
                   title: 'Package Name',
@@ -240,9 +241,9 @@ class Upload extends Component {
                   maxLength: 32,
                   onChange: handleChange,
                   error: this.state.errors.packageName
-                } as InputFieldProps;
+                };
 
-                const packageIdData = {
+                const packageIdData: InputFieldProps = {
                   classes: ['package-upload-input'],
                   name: 'packageId',
                   title: 'Package Identifier',
@@ -251,27 +252,40 @@ class Upload extends Component {
                   width: '35%',
                   onChange: handleChange,
                   error: this.state.errors.packageId
-                } as InputFieldProps;
+                };
               
-                const descTextAreaData = {
+                const descTextAreaData: InputAreaProps = {
                   name: 'description',
                   title: 'Description',
                   minLength: 10,
                   maxLength: 8192,
                   onChange: handleChange,
                   error: this.state.errors.description
-                } as InputAreaProps;
+                };
 
-                const initialVersionField = {
+                const initialVersionField: InputFieldProps = {
                   name: 'initialVersion',
-                  title: 'Intitial Version',
+                  title: 'Initial Version',
                   placeholder: 'x.x.x',
                   minLength: 1,
                   maxLength: 15,
                   width: '25%',
                   defaultValue: '1.0.0',
                   error: this.state.errors.initialVersion
-                } as InputFieldProps;
+                };
+
+                const inputFileProps: InputFileProps = {
+                  label: 'Package',
+                  name: 'file',
+                  types: '.zip',
+                  onChange: e => {
+                    if (!e.target.files?.length)
+                      return;
+                    this.setState({
+                      file: e.target.files[0]
+                    });
+                  }
+                };
 
                 return (
                   <>
@@ -293,14 +307,13 @@ class Upload extends Component {
                       </div>
                       <div className='upload-input-section top-margin'>
                         <h2>Initial Package Release</h2>
-                        <InputField {...initialVersionField} />
-                        <input type="file" id="package-file" name='file' onChange={e => {
-                          if (!e.target.files?.length)
-                            return;
-                          this.setState({
-                            file: e.target.files[0]
-                          });
-                        }} />
+                        <div className='right-half'>
+                          <InputField {...initialVersionField} />
+                        </div>
+                        <div className='left-half'>
+                          <InputFile {...inputFileProps}></InputFile>
+                          {/* <input type="file" id="package-file" name='file' onChange={} /> */}
+                        </div>
                       </div>
                       <div className='upload-input-section'>
                         <input

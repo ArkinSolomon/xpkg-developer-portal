@@ -73,7 +73,7 @@ class InputArea extends Component {
       this.style.height = '0';
       this.style.height = (this.scrollHeight) + 'px';
 
-      const currentLength = ($(this).val() as string).length;
+      const currentLength = ($(this).val() as string).trim().length;
       if (currentLength === state.currentLength)
         return;
       
@@ -90,7 +90,7 @@ class InputArea extends Component {
       this.style.height = '0';
       this.style.height = (this.scrollHeight) + 'px';
 
-      const currentLength = ($(this).val() as string).length;
+      const currentLength = ($(this).val() as string).trim().length;
       setState({
         currentLength
       } as InputAreaState);
