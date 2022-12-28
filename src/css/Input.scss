@@ -62,6 +62,11 @@
 
 .input-checkbox {
   font-size: 9pt;
+  display: inline-block;
+
+  &.block {
+    display: block;
+  }
 
   input {
     display: inline-block;

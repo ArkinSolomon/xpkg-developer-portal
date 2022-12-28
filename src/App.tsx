@@ -27,6 +27,7 @@ import Account from './pages/Account';
 import Edit from './pages/Edit';
 import Footer from './components/Footer';
 import Incompatibility from './pages/Incompatibility';
+import Tools from './pages/Tools';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path='/account' element={<Account />} />
         <Route path='/edit' element={<Edit />} />
         <Route path='/incompatibility' element={<Incompatibility />} />
+        <Route path='/tools' element={<Tools />} />
         <Route path='*' element={<NotFound />} />
       </Routes>
       <Footer />

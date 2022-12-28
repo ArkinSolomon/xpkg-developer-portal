@@ -63,6 +63,17 @@ div.subrow-top-right {
   }
 }
 
+.access-config {
+  .access-config-label {
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .input-checkbox {
+    margin-left: 7px;
+  }
+}
+
 .upload-input-section {
   &>.left-half {
     display: inline-block;
@@ -75,7 +86,8 @@ div.subrow-top-right {
     width: 50%;
   }
 
-  &>.left-third, &>.middle-third {
+  &>.left-third,
+  &>.middle-third {
     display: inline-block;
     width: 33%;
   }

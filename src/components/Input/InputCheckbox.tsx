@@ -21,11 +21,13 @@ function InputCheckbox(props: {
   center?: boolean;
   onChange: ChangeEventHandler;
   defaultValue?: boolean;
+  inline?: boolean; // Whether to display this element as a block level element or inline (default is inline)
+  checked?: boolean;
 }) {
-  const classes = 'input input-checkbox' + (props.center ? ' center' : '');
+  const classes = 'input input-checkbox' + (props.center ? ' center ' : ' ') + (!props.inline ? 'block' : '');
   return (
     <div className={classes}>
-      <input type='checkbox' name={props.name} onChange={props.onChange} defaultChecked={props.defaultValue} />
+      <input type='checkbox' name={props.name} onChange={props.onChange} defaultChecked={props.defaultValue} checked={props.checked} />
       <label>{props.title}</label>
     </div>
   );
