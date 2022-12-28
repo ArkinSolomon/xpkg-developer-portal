@@ -20,8 +20,9 @@
  * @property {boolean} isLoading True if the page is loading.
  * @property {string} [errorMessage] The error message of the page, or undefined if the page has no error.
  * @property {PackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
- * @property {Object} descriptionErrors Any errors for the fields in the description update sub-form.
- * @property {Object} newVersionErrors Any errors for the fields in the new version sub-form.
+ * @property {Partial<DescriptionValues?} descriptionErrors Any errors for the fields in the description update sub-form.
+ * @property {Partial<NewVersionValues>} newVersionErrors Any errors for the fields in the new version sub-form.
+ * @property {Omit<NewVersionValues, 'versionString'>} newVersionAccessConfig The values for the new version access config.
  * @property {ConfirmPopupConfig} [popupConfig] Configuration for the popup.
  * @property {boolean} isPopupVisible True if the popup is visible.
  * @property {boolean} isFormSubmitting True if any form is being submitted.
@@ -35,6 +36,7 @@ type EditState = {
   currentPackageData?: PackageData;
   descriptionErrors: Partial<DescriptionValues>
   newVersionErrors: Partial<NewVersionValues>
+  newVersionAccessConfig: Omit<NewVersionValues, 'versionString'>;
   popupConfig?: ConfirmPopupConfig;
   isPopupVisible: boolean;
   isFormSubmitting: boolean;
@@ -59,13 +61,17 @@ type DescriptionValues = {
  * @typedef {Object} NewVersionValues
  * @property {string} versionString The version string.
  * @property {boolean} isPublic True if the package is public. 
+ * @property {boolean} isPrivate True if the package is private.
+ * @property {boolean} shouldApprove True if the package is to be submitted for approval.
  */
 type NewVersionValues = {
   versionString: string;
   isPublic: boolean;
+  isPrivate: boolean;
+  shouldApprove: boolean;
 };
 
-import { Component, ReactNode } from 'react';
+import { ChangeEventHandler, Component, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
@@ -82,7 +88,7 @@ import Table, { TableProps } from '../components/Input/Table';
 import $ from 'jquery';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
-import { isVersionValid } from '../scripts/validators';
+import semver from 'semver';
 import InputCheckbox from '../components/Input/InputCheckbox';
 
 class Edit extends Component {
@@ -101,7 +107,12 @@ class Edit extends Component {
       isPopupVisible: false,
       isFormSubmitting: false,
       isDescriptionOriginal: true,
-      showNewVersionForm: true // Set this for easier debugging
+      showNewVersionForm: true, // Set this for easier debugging
+      newVersionAccessConfig: {
+        isPublic: true,
+        isPrivate: false,
+        shouldApprove: true
+      }
     };
 
     const token = tokenStorage.checkAuth();
@@ -199,9 +210,12 @@ class Edit extends Component {
       newVersionErrors.versionString = 'Version string required';
     else if (versionString.length > 15)
       newVersionErrors.versionString = 'Version string too long';
-    else if (!isVersionValid(versionString))
-      newVersionErrors.versionString = 'Invalid version string';
 
+    //TODO check if semver is implemented properly
+    else if (semver.valid(versionString))
+      newVersionErrors.versionString = 'Invalid version string';
+    
+    
     this.setState({
       newVersionErrors
     } as Partial<EditState>);
@@ -285,7 +299,9 @@ class Edit extends Component {
 
       const defaultNewVersionValues: NewVersionValues = {
         versionString: '',
-        isPublic: true
+        isPublic: true,
+        isPrivate: false,
+        shouldApprove: true
       };
 
       return (
@@ -465,15 +481,16 @@ class Edit extends Component {
                   validateOnMount={true}
                   initialValues={defaultNewVersionValues}
                   onSubmit={
-                    async ({versionString, isPublic}) => {
+                    async ({versionString, isPublic, isPrivate, shouldApprove}) => {
                       versionString = versionString.trim().toLowerCase();
 
-                      
                     }
                   }
                 >{({
                     handleChange,
-                    handleSubmit
+                    handleSubmit,
+                    setFieldValue,
+                    values
                   }) => {
 
                     const versionStringField: InputFieldProps = {
@@ -482,7 +499,7 @@ class Edit extends Component {
                       placeholder: 'x.x.x',
                       minLength: 1,
                       maxLength: 15,
-                      width: '50%',
+                      width: '66%',
                       error: this.state.newVersionErrors.versionString,
                     };
 
@@ -499,6 +516,33 @@ class Edit extends Component {
                       }
                     };
 
+                    const xpCompatiblityFieldProps: InputFieldProps = {
+                      title: 'X-Plane Compatiblity',
+                      placeholder: 'x.x.x-x.x.x',
+                      name: 'xpCompatibility',
+                      minLength: 1, 
+                      maxLength: 31, 
+                      width: '66%'
+                    };
+
+                    // This makes sure a user can't input invalid access config
+                    const checkboxUpdated = ({ isPublic, isPrivate, shouldApprove }: NewVersionValues) => {
+                      if (!isPrivate && !isPublic)
+                        setFieldValue('shouldApprove', false, false);
+                    
+                      if (!values.isPrivate && isPrivate)
+                        setFieldValue('isPublic', false, false);
+                    
+                      if (!values.isPublic && isPublic) {
+                        setFieldValue('isPrivate', false, false);
+                        setFieldValue('shouldApprove', true, false);
+                      }
+
+                      if (!values.shouldApprove && shouldApprove && !isPrivate)
+                        setFieldValue('isPublic', true, false);
+                    };
+                    const v = JSON.parse(JSON.stringify(values));
+
                     return (
                       <>
                         {!this.state.showNewVersionForm && 
@@ -507,16 +551,39 @@ class Edit extends Component {
                         {this.state.showNewVersionForm &&
                           <>
                             <form onSubmit={handleSubmit} onChange={handleChange}>
-                              <div className='upload-input-section top-margin'>
+                              <div className='upload-input-section top-margin bottom-margin'>
                                 <h2>Upload a New Version</h2>
                                 <div className='left-third'>
                                   <InputField {...versionStringField} />
                                 </div>
-                                <div className='middle-third'>
-                                  <InputCheckbox name="isPublic" title="Public" onChange={handleChange} defaultValue={defaultNewVersionValues.isPublic} /> 
+                                <div className='middle-third access-config'>
+                                  <label className='access-config-label'>Access Config</label>
+                                  <InputCheckbox inline name="isPublic" title="Public" onChange={e => {
+                                    v.isPublic = !v.isPublic;
+                                    handleChange(e);
+                                    checkboxUpdated(v);
+                                  }} checked={values.isPublic} /> 
+                                  <InputCheckbox inline name="isPrivate" title="Private" onChange={e => {
+                                    v.isPrivate = !v.isPrivate;
+                                    handleChange(e);
+                                    checkboxUpdated(v);
+                                  }} checked={values.isPrivate} /> 
+                                  <InputCheckbox inline name="shouldApprove" title="Submit for approval" onChange={e => {
+                                    v.shouldApprove = !v.shouldApprove;
+                                    handleChange(e);
+                                    checkboxUpdated(v);
+                                  }} checked={values.shouldApprove} /> 
                                 </div>
                                 <div className='right-third'>
                                   <InputFile {...fileUploadProps} />
+                                </div>
+                              </div>
+                              <div className='upload-input-section top-margin'>
+                                <div className='left-half'>
+                                  <InputField {...xpCompatiblityFieldProps} />
+                                </div>
+                                <div className='right-half'>
+                                  <p>Right</p>
                                 </div>
                               </div>
                               <div className='upload-input-section relative top-margin'>

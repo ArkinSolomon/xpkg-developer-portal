@@ -61,7 +61,7 @@ export function validateName(name: string): boolean {
  * @returns {Version|undefined} The version decomposed if the version is valid, otherwise none.
  */
 export function isVersionValid(version: string): Version | undefined {
-  if (version.length < 1 || version.length > 15)
+  if (version !== version.trim().toLowerCase() || version.length < 1 || version.length > 15 || version.endsWith('.'))
     return;
 
   const versionDecomp: Version = [0, 0, 0, void (0), void (0)];

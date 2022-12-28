@@ -12,22 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import '../css/Header.scss';
-import HeaderButton from './HeaderButton';
+@import "_colors.scss";
+@import "_fonts.scss";
 
-function Header() {
-  return (
-    <header>
-      <h1>X-Pkg Developer Portal</h1>
+#version-selection-output {
+  font-size: 11pt;
+  font-family: $noto-sans;
+  line-height: 14pt;
 
-      <div id="header-buttons">
-        <HeaderButton text='Packages' link='/packages' />
-        <HeaderButton text='Tools' link='/tools' />
-        <HeaderButton text='Documentation' link='https://documentation.x-pkg.net' />
-        <HeaderButton text='Support' link='/support' />
-        <HeaderButton text='Account' link='/account' />
-      </div>
-    </header>
-  );
+  color: $gray;
 }
-export default Header;
