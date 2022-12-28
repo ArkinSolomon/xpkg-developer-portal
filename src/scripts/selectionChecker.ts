@@ -12,7 +12,56 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import semver, { Range, SemVer } from 'semver';
+
+// How selection checking works.
+// 
+// This process basically works by taking a version and converting it to a 
+// float. This float is defined initially by taking the values for the major, 
+// minor, and patch numbers, extending each to three digit strings, and
+// smushing them together. For instance:
+// 
+// 4.18.39 becomes 004018039 which evaluates to 4018039.000000
+// 
+// This method is good enough for regular strings, but it gets slightly more
+// complex for version strings that include pre-releases. For this reason, we
+// subtract a value less than one from this value. This raises the value of the
+// pre-release version above the value of the last patch version, but keeps the
+// value below the full release version.
+// 
+// The specific value subtracted is dependent on whether it's an alpha or beta
+// pre-release. If it's an alpha pre-release the pre-release number is 
+// subtracted from 999, and it's smushed at the end of another 999 and placed
+// after the decimal point. For instance:
+// 
+// 5.2.4a5 becomes 005002004 - .999994 which evaluates to 5002003.000006
+// 
+// It's similar for the beta version, where instead of smushing a 999 before,
+// it's smushed after. So the process would be to subtract 999 from the 
+// pre-release version, and then add a decimal point before, and a 999 after.
+// For instance:
+//
+// 9.5.2b12 becomes 009005002 - .987999 which evaluates to 9005001.012001
+// 
+// These same operations could be performed using integers alone, and in the
+// future it should be considered (as there may be some performance gains).
+// However, at the time of development it's 6 am, it works and is good enough.
+//
+// Note: Big.js is used to get the precision needed for large numbers, without
+// floating point errors.
+
+/**
+ * This set defines bounds for a range. If the values of min and max are equal, it represents a single version range.
+ * 
+ * @typedef {Object} RangeSet 
+ * @property {Big} min The minimum value of the set.
+ * @property {Big} max The maximum value of the set.
+ */
+type RangeSet = {
+  min: Big;
+  max: Big;
+};
+
+import Big from 'big.js';
 import { Version, isVersionValid } from './validators';
 
 /**
@@ -21,8 +70,7 @@ import { Version, isVersionValid } from './validators';
 export default class SelectionChecker {
 
   private _isValid = true;
-  private _range?: Range;
-  private _rangeStr?: string;
+  private _ranges: RangeSet[] = [];
 
   /**
    * Check if the provided verison selection string was valid.
@@ -41,12 +89,8 @@ export default class SelectionChecker {
   constructor(selectionStr: string) {
     const selectionSections = selectionStr.split(',');
 
-    let rangeStr = '';
     for (let selection of selectionSections) {
       selection = selection.trim();
-
-      if (rangeStr !== '')
-        rangeStr += ' || ';
 
       const versionParts = selection.split('-');
 
@@ -59,7 +103,11 @@ export default class SelectionChecker {
           break;
         }
 
-        rangeStr += '=' + replaceAOrB(hasPre(version) ? versionStr(validVersion) : version);
+        const float = toFloat(validVersion);
+        this._ranges.push({
+          max: float,
+          min: float
+        });
         continue;
       } else if (versionParts.length !== 2) {
         this._isValid = false;
@@ -80,63 +128,90 @@ export default class SelectionChecker {
         break;
       }
 
-      if (lowerVersion)
-        lowerVersionStr = hasPre(lowerVersionStr) ?  versionStr(lowerVersion) : lowerVersionStr;
-      if (upperVersion)
-        upperVersionStr = hasPre(upperVersionStr) ? versionStr(upperVersion) : upperVersionStr;
+      const range: RangeSet = {
+        min: new Big('0.000002'),
+        max: new Big('999999999')
+      };
 
-      if (hasLower && !hasUpper)
-        rangeStr += '>=' + replaceAOrB(lowerVersionStr);
-      else if (hasUpper && !hasLower)
-        rangeStr += ' <=' + replaceAOrB(upperVersionStr);
-      else
-        rangeStr += replaceAOrB(lowerVersionStr) + ' - ' + replaceAOrB(upperVersionStr);
+      if (hasLower)
+        range.min = toFloat(lowerVersion as Version);
+      if (hasUpper)
+        range.max = toFloat(upperVersion as Version);
+
+      if (range.min.gt(range.max)) {
+        this._isValid = false;
+        break;
+      }
+
+      this._ranges.push(range);
     }
-    if (this._isValid) {
-      this._range = new Range(rangeStr, {
-        // includePrerelease: true
-      });
-      this._rangeStr = rangeStr;
+
+    for (const set of this._ranges) {
+      console.log(`Min: ${set.min.toString()}, Max: ${set.max.toString()}`);
     }
   }
 
-  isWithinRange(version: string): boolean {
-    if (!this._isValid)
-      throw new Error('Range string provided not valid');
+  /**
+   * Check to see whether a version falls within this selection.
+   * 
+   * @param {Version} version Check if a version falls within a version selection.
+   * @returns {boolean} True if the number is within the selection.
+   */
+  isWithinRange(version: Version): boolean {
+    for (const range of this._ranges) {
+      const versionFloat = toFloat(version);
 
-    const versionValid = isVersionValid(version);
-    if (!versionValid)
-      throw new Error('Version not valid');
-
-    version = replaceAOrB(versionStr(versionValid));
-    console.log(version);
-    return this._range?.test(version) as boolean;
+      if (versionFloat.gte(range.min) && versionFloat.lte(range.max))
+        return true;
+    }
+    return false;
   }
-}
-
-function hasPre(versionStr: string): boolean {
-  return versionStr.includes('a') || versionStr.includes('b');
-}
-
-function replaceAOrB(versionStr: string): string {
-  if (!hasPre(versionStr))
-    return versionStr;
-  
-  const version = isVersionValid(versionStr);
-  if (!version)
-    throw new Error('Invalid version');
-  
-  return `${version[0]}.${version[1]}.${version[2]}-pre.${version[4] as number * (version[3] === 'b' ? 1000 : 1)}`;
 }
 
 /**
- * Convert a version to a string.
+ * Convert a version number to a float representation.
  * 
- * @param {Version} version The version to convert to a string.
+ * @param {Version} version The version to convert to a float.
+ * @returns {Big} The version's float representation.
  */
-export function versionStr(version: Version) {
-  let finalStr = version.slice(0, 3).join('.');
-  if (version[3])
-    finalStr += version.slice(3, 5).join('');
-  return finalStr;
+function toFloat(version: Version): Big {
+
+  // The first number does not have to be exactly three digits long, it'll be trimmed off anyway
+  const floatStr = `${version[0]}${toThreeDigits(version[1])}${toThreeDigits(version[2])}`;
+
+  const semverFloat = new Big(floatStr);
+  const aOrB = version[3];
+  if (!aOrB)
+    return semverFloat;
+
+  const preReleaseNum = 999 - (version[4] as number);
+  let preReleaseFloatStr: string;
+  if (aOrB === 'a')
+    preReleaseFloatStr = `.999${toThreeDigits(preReleaseNum)}`;
+  else
+    preReleaseFloatStr = `.${toThreeDigits(preReleaseNum)}999`;
+  const preReleaseFloat = new Big(preReleaseFloatStr);
+
+  return semverFloat.sub(preReleaseFloat);
+}
+
+/**
+ * Convert a number string that is smaller than three digits in length to a fixed length of three digits
+ * 
+ * @param {number|string} num The number to bring to three digits.
+ * @returns {string} The number as a three digit string.
+ * @throws {Error} If the number is greater than three digits or is given an empty string.
+ */
+function toThreeDigits(num: number | string): string {
+  if (typeof num === 'number')
+    num = num.toString();
+
+  if (num.length === 1)
+    return '00' + num;
+  else if (num.length === 2)
+    return '0' + num;
+  else if (num.length === 3)
+    return num;
+  else
+    throw new Error('Number too long');
 }

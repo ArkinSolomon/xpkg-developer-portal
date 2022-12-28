@@ -19,7 +19,7 @@ import MainContainerRight from '../components/Main Container/MainContainerRight'
 import { Formik } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/Tools.scss';
-import { isVersionValid } from '../scripts/validators';
+import { Version, isVersionValid } from '../scripts/validators';
 import SelectionChecker from '../scripts/selectionChecker';
 
 /**
@@ -136,7 +136,7 @@ export default class Tools extends Component {
                   versionTesterErrors.testVersionSelection = 'Invalid version selection';
 
                 if (JSON.stringify(versionTesterErrors) === '{}') {
-                  const isValid = selectionChecker.isWithinRange(testVersionStr);
+                  const isValid = selectionChecker.isWithinRange(testVersion as Version);
                   console.log(isValid);
                 }
                     
