@@ -22,7 +22,7 @@
   }
 }
 
-@mixin submit-button {
+@mixin primary-button {
   @include dark-blue-hover;
 
   display: inline-flex;
@@ -44,7 +44,7 @@
 }
 
 @mixin secondary-button {
-  @include submit-button;
+  @include primary-button;
 
   background-color: $gray;
 

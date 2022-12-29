@@ -59,7 +59,7 @@ $popup-padding: 12px;
     }
 
     .confirm-button {
-      @include submit-button;
+      @include primary-button;
       margin-right: 10px;
     }
 

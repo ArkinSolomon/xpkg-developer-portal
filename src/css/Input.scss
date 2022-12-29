@@ -193,7 +193,7 @@
   font-family: $noto-sans;
 
   label {
-    @include submit-button;
+    @include primary-button;
     padding: 5px 1rem;
 
     input {

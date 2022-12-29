@@ -17,33 +17,39 @@
  * Properties passed to the input field.
  * 
  * @typedef {Object} InputFieldProps
- * @property {string} name The name of the field.
- * @property {string} title The title value of the field. Used if placeholder is not provided.
+ * @property {string} [name] The name of the field.
+ * @property {string} [title] The title value of the field. Used if placeholder is not provided.
  * @property {string} [placeholder] The placeholder value of the field.
  * @property {boolean} [center=false] True if the field should be centered.
  * @property {string} [width] A custom value for the width property.
  * @property {string} [defaultValue] The default value of the field.
+ * @property {string} [value] The current value of the field. 
  * @property {string} [type=text] An alternate type of input.
  * @property {ChangeEventHandler} [onChange] The event handler to be passed to the onChange property of the field.
  * @property {string[]} [classes=[]] Additional classes to pass to the wrapping div.
  * @property {number} [maxLength] The maximum length of the value in the field.
  * @property {number} [minLength] The minimum length of the value in the field.
  * @property {string} [error] Any error with the text area to display under it.
+ * @property {boolean|Function<boolean>} [hiddenError] True if there is an error that has no message. The box will be outlined red.
+ * @property {string} [inputKey] A key passed to the input element. Useful for dynamically created fields.
  * @property {boolean} [readonly] True if the field should be readonly.
  */
 export type InputFieldProps = {
-  name: string;
-  title: string;
+  name?: string;
+  title?: string;
   placeholder?: string;
   center?: boolean;
   width?: string;
   type?: string;
   defaultValue?: string;
+  value?: string;
   onChange?: ChangeEventHandler;
   classes?: string | string[];
   maxLength?: number;
   minLength?: number;
   error?: string;
+  hiddenError?: boolean | (() => boolean);
+  inputKey?: string;
   readonly?: boolean;
 };
 
@@ -74,7 +80,7 @@ class InputField extends Component {
 
     this.state = {
       currentLength: (props.defaultValue ?? '').trim().length,
-      id: nanoid()
+      id: props.inputKey ?? nanoid()
     };
   }
 
@@ -105,7 +111,8 @@ class InputField extends Component {
     const lengthError = this.state.currentLength < (props.minLength ?? -1) ||
       this.state.currentLength > (props.maxLength ?? Infinity);
     
-    const hasError = props.error || lengthError;
+    const hiddenError = typeof props.hiddenError === 'boolean' ? props.hiddenError : props.hiddenError?.();
+    const hasError = hiddenError || props.error || lengthError;
 
     // Copy the array of classes, guarantee existence
     let propsClasses: string[] | null = (props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[]);
@@ -125,15 +132,17 @@ class InputField extends Component {
 
     return (
       <div className={classes} style={{ width }}>
-        <label htmlFor={props.name}>{props.title}</label>
+        {props.title && <label htmlFor={props.name}>{props.title}</label>}
         <input
           id={this.state.id}
           type={type}
           name={props.name}
           placeholder={props.placeholder ?? props.title}
           defaultValue={props.defaultValue}
+          value={props.value}
           onChange={props.onChange}
           readOnly={props.readonly}
+          key={props.inputKey}
         />
         {props.error && 
           <p className='error error-text'>

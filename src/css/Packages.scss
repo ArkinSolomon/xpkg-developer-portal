@@ -17,7 +17,7 @@
 @import "_colors.scss";
 
 .upload-button {
-  @include submit-button;
+  @include primary-button;
 
   span {
     line-height: 14pt;

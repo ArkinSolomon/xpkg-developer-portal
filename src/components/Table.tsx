@@ -42,7 +42,7 @@ type TableState<T> = {
 }
 
 import {Component, ReactElement, ReactNode} from 'react';
-import '../../css/Table.scss';
+import '../css/Table.scss';
 import $ from 'jquery';
 import { nanoid } from 'nanoid';
 
@@ -62,11 +62,19 @@ class Table<T> extends Component {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
     $('.expand-button').on('click', function () {
-      const index = parseInt(this.getAttribute('data-index') as string, 10);
-      that.setState({
-        currentSubrowData: (that.props as TableProps<T>).subrowData[index],
-        r: index
-      } as Partial<TableState<T>>);
+      if (typeof that.state.currentSubrowData === 'undefined') {
+        const index = parseInt(this.getAttribute('data-index') as string, 10);
+        that.setState({
+          currentSubrowData: (that.props as TableProps<T>).subrowData[index],
+          r: index
+        } as Partial<TableState<T>>);
+      } else {
+        that.setState({
+          currentSubrowData: void (0),
+          r: void (0)
+        } as Partial<TableState<T>>);
+      }
+
     });
   }
 
@@ -94,14 +102,21 @@ class Table<T> extends Component {
         d.push(<td style={style} key={nanoid()}>{row[i]}</td>);
       }
   
-      d.push(<td className='expand-button' data-index={r} key={nanoid()}>+</td>);
+      d.push(<td
+        className='expand-button'
+        data-index={r}
+        key={nanoid(10)}
+        dangerouslySetInnerHTML={{
+          __html: typeof this.state.currentSubrowData === 'undefined' ? '+' : '&#8211;'
+        }}
+      />);
       tableData.push(<tr key={nanoid()}>{d}</tr>);
     }
 
     if (typeof this.state.currentSubrowData !== 'undefined') {
       const subrow = props.subrowRender(this.state.currentSubrowData);
       tableData.splice(this.state.r as number + 1, 0, (
-        <tr key="TABLE_SUBROW">
+        <tr key="table-subrow">
           <td className='table-subrow' colSpan={Object.keys(props.columns).length + 1}>
             {subrow}
           </td>

@@ -122,7 +122,7 @@ import { postCB, downloadFile } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
 import '../css/SubrowStyles.scss';
-import Table from '../components/Input/Table';
+import Table from '../components/Table';
 import { nanoid } from 'nanoid';
 import $ from 'jquery';
 

@@ -29,6 +29,9 @@
  * @property {boolean} isDescriptionOriginal True if the description is the same as the original description.
  * @property {boolean} showNewVersionForm True if we should show the new version form.
  * @property {File} [newVersionFile] The file uploaded for the new version.
+ * @property {JSX.Element} dependencyList The dependency list rendered. 
+ * @property {JSX.Element} optionalDependencyList The optional dependency list rendered.
+ * @property {JSX.Element} incompatibilityList The incompatibility list rendered.
  */
 type EditState = {
   isLoading: boolean;
@@ -43,6 +46,9 @@ type EditState = {
   isDescriptionOriginal: boolean;
   showNewVersionForm: boolean;
   newVersionFile?: File;
+  dependencyList: JSX.Element;
+  optionalDependencyList: JSX.Element;
+  incompatibilityList: JSX.Element;
 };
 
 /**
@@ -71,7 +77,7 @@ type NewVersionValues = {
   shouldApprove: boolean;
 };
 
-import { ChangeEventHandler, Component, ReactNode } from 'react';
+import { Component, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
@@ -84,22 +90,35 @@ import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import '../css/Edit.scss';
 import '../css/SubrowStyles.scss';
-import Table, { TableProps } from '../components/Input/Table';
+import Table, { TableProps } from '../components/Table';
 import $ from 'jquery';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
-import semver from 'semver';
 import InputCheckbox from '../components/Input/InputCheckbox';
+import { isVersionValid } from '../scripts/validators';
+import PackageList, { PackageListProps } from '../components/PackageList';
+import { nanoid } from 'nanoid';
 
 class Edit extends Component {
 
-  state: EditState;
+  state: EditState; 
+
+  private _isMounted = false;
   private _originalDesc: string;
+  private _dependencies: [string, string][];
+  private _optionalDependencies: [string, string][];
+  private _incompatibilities: [string, string][];
 
   constructor(props: Record<string, never>) {
     super(props);
 
     this._originalDesc = '';
+    this._dependencies = [['', '']];
+    this._optionalDependencies = [['', '']];
+    this._incompatibilities = [['', '']];
+
+    const lists = this._genLists();
+
     this.state = {
       isLoading: true,
       descriptionErrors: {},
@@ -107,12 +126,13 @@ class Edit extends Component {
       isPopupVisible: false,
       isFormSubmitting: false,
       isDescriptionOriginal: true,
-      showNewVersionForm: true, // Set this for easier debugging
+      showNewVersionForm: false, // Set this to true for easier debugging
       newVersionAccessConfig: {
         isPublic: true,
         isPrivate: false,
         shouldApprove: true
-      }
+      },
+      ...lists
     };
 
     const token = tokenStorage.checkAuth();
@@ -126,7 +146,42 @@ class Edit extends Component {
     this.validateNewVersion = this.validateNewVersion.bind(this);
   }
 
+  private _genLists(): Pick<EditState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> {
+
+    const dependencyListProps: PackageListProps = {
+      initialValues:  this._dependencies,
+      onChange: (i, packageId, versionSelection) => {
+        this._dependencies[i] = [packageId, versionSelection];
+      }
+    };
+
+    const optionalDependencyList: PackageListProps = {
+      initialValues:  this._optionalDependencies,
+      onChange: (i, packageId, versionSelection) => {
+        this._optionalDependencies[i] = [packageId, versionSelection];
+      }
+    };
+
+    const incompatibilityListProps: PackageListProps = {
+      initialValues:  this._incompatibilities,
+      onChange: (i, packageId, versionSelection) => {
+        this._incompatibilities[i] = [packageId, versionSelection];
+      }
+    };
+
+    // Make sure to generate a random key each render, otherwise it'll be consistent and won't re-render
+    const newValues: Pick<EditState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> = {
+      dependencyList: <PackageList {...dependencyListProps} key={nanoid(5)} />,
+      optionalDependencyList: <PackageList {...optionalDependencyList} key={nanoid(5)} />,
+      incompatibilityList: <PackageList {...incompatibilityListProps} key={nanoid(5)} />
+    };
+    if (this._isMounted) 
+      this.setState(newValues as Partial<EditState>);
+    return newValues;
+  }
+
   componentDidMount(): void {
+    this._isMounted = true;
     const urlParams = new URLSearchParams(location.search);
     let packageId: string;
     try {
@@ -184,6 +239,10 @@ class Edit extends Component {
     });
   }
 
+  componentWillUnmount(): void {
+    this._isMounted = false;
+  }
+
   validateDescription({ description }: DescriptionValues): FormikErrors<DescriptionValues> {
     description = (description ?? '').trim();
 
@@ -210,11 +269,8 @@ class Edit extends Component {
       newVersionErrors.versionString = 'Version string required';
     else if (versionString.length > 15)
       newVersionErrors.versionString = 'Version string too long';
-
-    //TODO check if semver is implemented properly
-    else if (semver.valid(versionString))
+    else if (!isVersionValid(versionString))
       newVersionErrors.versionString = 'Invalid version string';
-    
     
     this.setState({
       newVersionErrors
@@ -230,6 +286,7 @@ class Edit extends Component {
           <MainContainerRightError message={this.state.errorMessage} />
         </MainContainer>
       );
+    
     // We keep loading until state is updated
     else if (this.state.isLoading || !this.state.currentPackageData?.packageId) 
       return (
@@ -249,7 +306,7 @@ class Edit extends Component {
           'Uploaded Date': 28
         },
         data: [],
-        subrowData: [], 
+        subrowData: [],
         subrowRender: version => {
           return (
             <div className='version-table-subrow'>
@@ -257,8 +314,7 @@ class Edit extends Component {
               <p>{version.installs} installs</p>
               <p>Checksum: {version.hash}</p>
               {version.private ? <p><a className='subrow-private-key-link' onClick={e => {
-                e.preventDefault();
-                
+                e.preventDefault(); 
                 $(e.target).parent().html(`Private key: ${version.privateKey}`);
               }}>Click to reveal private key</a></p> : void (0)}
               <div className='subrow-top-right'>
@@ -520,8 +576,6 @@ class Edit extends Component {
                       title: 'X-Plane Compatiblity',
                       placeholder: 'x.x.x-x.x.x',
                       name: 'xpCompatibility',
-                      minLength: 1, 
-                      maxLength: 31, 
                       width: '66%'
                     };
 
@@ -582,8 +636,76 @@ class Edit extends Component {
                                 <div className='left-half'>
                                   <InputField {...xpCompatiblityFieldProps} />
                                 </div>
-                                <div className='right-half'>
-                                  <p>Right</p>
+                              </div>
+                              <div className='upload-input-section flex-section top-margin'>
+                                <div className='left-third right-border'>
+                                  <p>Dependencies</p>
+                                  <div className='package-list'>
+                                    {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
+                                    {this.state.dependencyList}
+                                  </div>
+                                  <div className='package-list-buttons'>
+                                    <button
+                                      className='list-mod-button left'
+                                      onClick={() => {
+                                        this._dependencies.push(['', '']);
+                                        this._genLists();
+                                      }}
+                                    >Add</button>
+                                    <button
+                                      className='list-mod-button right'
+                                      onClick={() => {
+                                        this._dependencies.pop();
+                                        this._genLists();
+                                      }}
+                                    >Remove</button>
+                                  </div>
+                                </div>
+                                <div className='middle-third right-border'>
+                                  <p>Optional Dependencies</p>
+                                  <div className='package-list'>
+                                    {this._optionalDependencies.length === 0 && <p className='package-list-empty'>No optional dependencies</p>}
+                                    {this.state.optionalDependencyList}
+                                  </div>
+                                  <div className='package-list-buttons'>
+                                    <button
+                                      className='list-mod-button left'
+                                      onClick={() => {
+                                        this._optionalDependencies.push(['', '']);
+                                        this._genLists();
+                                      }}
+                                    >Add</button>
+                                    <button
+                                      className='list-mod-button right'
+                                      onClick={() => {
+                                        this._optionalDependencies.pop();
+                                        this._genLists();
+                                      }}
+                                    >Remove</button>
+                                  </div>
+                                </div>
+                                <div className='right-third other-borders'>
+                                  <p>Incompatibilities</p>
+                                  <div className='package-list'>
+                                    {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
+                                    {this.state.incompatibilityList}
+                                  </div>
+                                  <div className='package-list-buttons'>
+                                    <button
+                                      className='list-mod-button left'
+                                      onClick={() => {
+                                        this._incompatibilities.push(['', '']);
+                                        this._genLists();
+                                      }}
+                                    >Add</button>
+                                    <button
+                                      className='list-mod-button right'
+                                      onClick={() => {
+                                        this._incompatibilities.pop();
+                                        this._genLists();
+                                      }}
+                                    >Remove</button>
+                                  </div>
                                 </div>
                               </div>
                               <div className='upload-input-section relative top-margin'>

@@ -12,36 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-@import "_fonts.scss";
-@import "_colors.scss";
-@import "_mixins.scss";
+.package-list-row {
+  margin-top: 10px;
 
-.error-container {
-  height: 75vh;
-  width: 100%;
-  font-family: $noto-sans;
+  .package-list-input-wrapper {
+    width: 50%;
+    display: inline-block;
+  }
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  div {
-    text-align: center;
-
-    h1 {
-      font-size: 60pt;
-      color: $dark-blue;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 14pt;
-    }
-
-    button {
-      @include primary-button;
-
-      margin-top: 12px;
-    }
+  &:first-of-type {
+    margin-top: 0;
   }
 }
