@@ -18,7 +18,7 @@ function Footer() {
   return (
     <footer>
       <hr />
-      &copy; X-Pkg Developer Portal Contributors. X-Pkg is an open source project, view the code on <a href="https://github.com/ArkinSolomon/xpkg-developer-portal">GitHub</a>.
+      &copy; 2022 X-Pkg Developer Portal Contributors. X-Pkg is an open source project, view the code on <a href="https://github.com/ArkinSolomon/xpkg-developer-portal">GitHub</a>.
     </footer>
   );
 }

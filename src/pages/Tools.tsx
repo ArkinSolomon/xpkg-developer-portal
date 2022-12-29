@@ -20,7 +20,8 @@ import { Formik } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/Tools.scss';
 import { Version, isVersionValid } from '../scripts/validators';
-import SelectionChecker from '../scripts/selectionChecker';
+import SelectionChecker, { versionStr } from '../scripts/selectionChecker';
+import { version } from 'os';
 
 /**
  * An enumeration for all of the different tools available.
@@ -122,6 +123,7 @@ export default class Tools extends Component {
                 const versionTesterErrors: Partial<VersionTesterValues> = {};
                 const testVersion = isVersionValid(testVersionStr);
                 const selectionChecker = new SelectionChecker(testVersionSelectionStr);
+                let versionTesterOutput = DEFAULT_VERSION_OUTPUT;
                     
                 if (testVersionStr.length === 0)
                   versionTesterErrors.testVersion = 'Version string required';
@@ -136,12 +138,33 @@ export default class Tools extends Component {
                   versionTesterErrors.testVersionSelection = 'Invalid version selection';
 
                 if (JSON.stringify(versionTesterErrors) === '{}') {
-                  const isValid = selectionChecker.isWithinRange(testVersion as Version);
-                  console.log(isValid);
+                  const isWithinRange = selectionChecker.isWithinRange(testVersion as Version);
+                  
+                  const ranges = selectionChecker.ranges;
+                  let rangeStr = '';
+                  for (const i in ranges) {
+                    const range = ranges[i];
+
+                    // Double tilde converts string to a number
+                    if (ranges.length > 1 && ~~i === ranges.length - 1) 
+                      rangeStr += ' and ';
+
+                    // Since we're using bold tags here we have to set the HTML dangerously
+                    if (range.max.eq(range.min))
+                      rangeStr += '<b>' + versionStr(range.maxVersion) + '</b>';
+                    else
+                      rangeStr += `<b>${versionStr(range.minVersion)}&#8211;${versionStr(range.maxVersion)}</b>`;
+                      
+                    if (ranges.length !== 2)
+                      rangeStr += ', ';
+                  }
+
+                  versionTesterOutput = `The version <b>${versionStr(testVersion as Version)}</b> is ${isWithinRange ? '' : '<b>not</b> '} within the range. The range you have specified covers versions ${rangeStr.substring(0, ranges.length !== 2 ? rangeStr.length - 3 : rangeStr.length - 1)}.`;
                 }
                     
                 this.setState({
-                  versionTesterErrors
+                  versionTesterErrors,
+                  versionTesterOutput
                 } as Partial<ToolsState>);
                 return {};
               }}
@@ -175,7 +198,7 @@ export default class Tools extends Component {
 
                 return (
                   <>
-                    <p id="version-selection-output">{ this.state.versionTesterOutput }</p>
+                    <p id="version-selection-output" dangerouslySetInnerHTML={{__html: this.state.versionTesterOutput}}></p>
                     <div className="upload-input-section bottom-margin">
                       <div className="left-half">
                         <InputField {...testVersionField} />

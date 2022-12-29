@@ -47,7 +47,8 @@
 // However, at the time of development it's 6 am, it works and is good enough.
 //
 // Note: Big.js is used to get the precision needed for large numbers, without
-// floating point errors.
+// floating point errors. If speed becomes a problem, it might be worth looking
+// into performing these operations using native numbers.
 
 /**
  * This set defines bounds for a range. If the values of min and max are equal, it represents a single version range.
@@ -59,6 +60,8 @@
 type RangeSet = {
   min: Big;
   max: Big;
+  minVersion: Version;
+  maxVersion: Version;
 };
 
 import Big from 'big.js';
@@ -77,8 +80,17 @@ export default class SelectionChecker {
    * 
    * @returns {boolean} True if the provided version selection string is valid.
    */
-  get isValid() {
+  get isValid(): boolean {
     return this._isValid;
+  }
+
+  /**
+   * Get a copy of the the ranges (simplified).
+   * 
+   * @returns {RangeSet[]} A copy of the simplified ranges.
+   */
+  get ranges(): RangeSet[] {
+    return this._ranges.slice();
   }
 
   /**
@@ -90,11 +102,22 @@ export default class SelectionChecker {
     const selectionSections = selectionStr.split(',');
 
     for (let selection of selectionSections) {
+      const allRanges: RangeSet = {
+        min: new Big('0.000002'),
+        max: new Big('999999999'),
+        minVersion: [0, 0, 1, 'a', 1],
+        maxVersion: [999, 999, 999]
+      };
+
       selection = selection.trim();
 
       const versionParts = selection.split('-');
 
       if (versionParts.length === 1) {
+        if (selection === '*') {
+          this._ranges = [allRanges];
+          break;
+        }
 
         const version = versionParts[0].trim();
         const validVersion = isVersionValid(version);
@@ -106,7 +129,9 @@ export default class SelectionChecker {
         const float = toFloat(validVersion);
         this._ranges.push({
           max: float,
-          min: float
+          min: float,
+          maxVersion: validVersion,
+          minVersion: validVersion
         });
         continue;
       } else if (versionParts.length !== 2) {
@@ -118,7 +143,7 @@ export default class SelectionChecker {
       lowerVersionStr = lowerVersionStr.trim();
       upperVersionStr = upperVersionStr.trim();
 
-      const lowerVersion = isVersionValid(lowerVersionStr);
+      let lowerVersion = isVersionValid(lowerVersionStr);
       const upperVersion = isVersionValid(upperVersionStr);
       const hasLower = lowerVersionStr !== '';
       const hasUpper = upperVersionStr !== '';
@@ -128,15 +153,34 @@ export default class SelectionChecker {
         break;
       }
 
-      const range: RangeSet = {
-        min: new Big('0.000002'),
-        max: new Big('999999999')
-      };
+      const range = allRanges;
 
-      if (hasLower)
-        range.min = toFloat(lowerVersion as Version);
-      if (hasUpper)
-        range.max = toFloat(upperVersion as Version);
+      if (hasLower && lowerVersion) {
+
+        // Since (for instance) 1 really means everything from 1.0.0a1 and up, we can use this hack
+        if (!lowerVersion[3])
+          lowerVersion = isVersionValid(lowerVersionStr + 'a1') as Version;
+
+        range.min = toFloat(lowerVersion);
+        range.minVersion = lowerVersion;
+      }
+
+      if (hasUpper && upperVersion) {
+
+        // Similarly, since (for instance) 2 really means everything up to 2.999.999, we can use this hack
+        const partLen = upperVersionStr.split('.').length;
+        const hasPre = upperVersionStr.includes('a') || upperVersionStr.includes('b');
+
+        if (!hasPre) {
+          if (partLen < 2)
+            upperVersion[1] = 999;
+          if (partLen < 3)
+            upperVersion[2] = 999;
+        }
+
+        range.max = toFloat(upperVersion);
+        range.maxVersion = upperVersion;
+      }
 
       if (range.min.gt(range.max)) {
         this._isValid = false;
@@ -146,8 +190,47 @@ export default class SelectionChecker {
       this._ranges.push(range);
     }
 
-    for (const set of this._ranges) {
-      console.log(`Min: ${set.min.toString()}, Max: ${set.max.toString()}`);
+    if (!this._isValid)
+      return;
+
+    // // Sort them in order from least to greatest
+    // this._ranges = this._ranges.sort((a, b) => {
+    //   const diff = a.min.sub(b.max);
+
+    //   if (diff.eq(0))
+    //     return 0;
+
+    //   return diff.lt(0) ? -1 : 1;
+    // });
+
+    // console.log('--SORTED--');
+    // for (const range of this._ranges) {
+    //   console.log(versionStr(range.minVersion), versionStr(range.maxVersion));
+    // }
+    // console.log('--SORTED--');
+
+    // // Range simplification
+    // let i = 0;
+    // while (i < this._ranges.length - 1) {
+    //   const thisRange = this._ranges[i];
+    //   const nextRange = this._ranges[i + 1];
+
+    //   // Merge the two ranges if the max of one range is equal to the min of the other.
+    //   if (thisRange.max.eq(nextRange.min)) {
+    //     this._ranges.splice(i, 2, {
+    //       min: thisRange.min,
+    //       max: nextRange.max,
+    //       minVersion: thisRange.minVersion,
+    //       maxVersion: nextRange.maxVersion
+    //     });
+    //     continue;
+    //   }
+
+    //   ++i;
+    // }
+
+    for (const range of this._ranges) {
+      console.log(range.min.toString(), range.max.toString());
     }
   }
 
@@ -214,4 +297,17 @@ function toThreeDigits(num: number | string): string {
     return num;
   else
     throw new Error('Number too long');
+}
+
+/**
+ * Convert a version to a string.
+ * 
+ * @param {Version} version The version to convert to a string.
+ * @returns {string} The version represented as a string.
+ */
+export function versionStr(version: Version): string {
+  let finalStr = version.slice(0, 3).join('.');
+  if (version[3])
+    finalStr += version.slice(3, 5).join('');
+  return finalStr;
 }
