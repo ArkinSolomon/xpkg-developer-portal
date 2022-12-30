@@ -65,7 +65,7 @@ type RangeSet = {
 };
 
 import Big from 'big.js';
-import { Version, isVersionValid } from './validators';
+import Version from './version';
 
 /**
  * This class creates a checker to check if a version matches a selection.
@@ -105,8 +105,8 @@ export default class SelectionChecker {
       const allRanges: RangeSet = {
         min: new Big('0.000002'),
         max: new Big('999999999'),
-        minVersion: [0, 0, 1, 'a', 1],
-        maxVersion: [999, 999, 999]
+        minVersion: new Version(0, 0, 1, 'a', 1),
+        maxVersion: new Version(999, 999, 999)
       };
 
       selection = selection.trim();
@@ -120,13 +120,13 @@ export default class SelectionChecker {
         }
 
         const version = versionParts[0].trim();
-        const validVersion = isVersionValid(version);
+        const validVersion = Version.fromString(version);
         if (!validVersion) {
           this._isValid = false;
           break;
         }
 
-        const float = toFloat(validVersion);
+        const float = validVersion.toFloat();
         this._ranges.push({
           max: float,
           min: float,
@@ -143,8 +143,8 @@ export default class SelectionChecker {
       lowerVersionStr = lowerVersionStr.trim();
       upperVersionStr = upperVersionStr.trim();
 
-      let lowerVersion = isVersionValid(lowerVersionStr);
-      const upperVersion = isVersionValid(upperVersionStr);
+      let lowerVersion = Version.fromString(lowerVersionStr);
+      const upperVersion = Version.fromString(upperVersionStr);
       const hasLower = lowerVersionStr !== '';
       const hasUpper = upperVersionStr !== '';
 
@@ -158,10 +158,10 @@ export default class SelectionChecker {
       if (hasLower && lowerVersion) {
 
         // Since (for instance) 1 really means everything from 1.0.0a1 and up, we can use this hack
-        if (!lowerVersion[3])
-          lowerVersion = isVersionValid(lowerVersionStr + 'a1') as Version;
+        if (!lowerVersion.isPreRelease)
+          lowerVersion = Version.fromString(lowerVersionStr + 'a1') as Version;
 
-        range.min = toFloat(lowerVersion);
+        range.min = lowerVersion.toFloat();
         range.minVersion = lowerVersion;
       }
 
@@ -173,12 +173,12 @@ export default class SelectionChecker {
 
         if (!hasPre) {
           if (partLen < 2)
-            upperVersion[1] = 999;
+            upperVersion.minor = 999;
           if (partLen < 3)
-            upperVersion[2] = 999;
+            upperVersion.patch = 999;
         }
 
-        range.max = toFloat(upperVersion);
+        range.max = upperVersion.toFloat();
         range.maxVersion = upperVersion;
       }
 
@@ -193,45 +193,7 @@ export default class SelectionChecker {
     if (!this._isValid)
       return;
 
-    // // Sort them in order from least to greatest
-    // this._ranges = this._ranges.sort((a, b) => {
-    //   const diff = a.min.sub(b.max);
-
-    //   if (diff.eq(0))
-    //     return 0;
-
-    //   return diff.lt(0) ? -1 : 1;
-    // });
-
-    // console.log('--SORTED--');
-    // for (const range of this._ranges) {
-    //   console.log(versionStr(range.minVersion), versionStr(range.maxVersion));
-    // }
-    // console.log('--SORTED--');
-
-    // // Range simplification
-    // let i = 0;
-    // while (i < this._ranges.length - 1) {
-    //   const thisRange = this._ranges[i];
-    //   const nextRange = this._ranges[i + 1];
-
-    //   // Merge the two ranges if the max of one range is equal to the min of the other.
-    //   if (thisRange.max.eq(nextRange.min)) {
-    //     this._ranges.splice(i, 2, {
-    //       min: thisRange.min,
-    //       max: nextRange.max,
-    //       minVersion: thisRange.minVersion,
-    //       maxVersion: nextRange.maxVersion
-    //     });
-    //     continue;
-    //   }
-
-    //   ++i;
-    // }
-
-    for (const range of this._ranges) {
-      console.log(range.min.toString(), range.max.toString());
-    }
+    // TODO simplify selection
   }
 
   /**
@@ -242,72 +204,11 @@ export default class SelectionChecker {
    */
   isWithinRange(version: Version): boolean {
     for (const range of this._ranges) {
-      const versionFloat = toFloat(version);
+      const versionFloat = version.toFloat();
 
       if (versionFloat.gte(range.min) && versionFloat.lte(range.max))
         return true;
     }
     return false;
   }
-}
-
-/**
- * Convert a version number to a float representation.
- * 
- * @param {Version} version The version to convert to a float.
- * @returns {Big} The version's float representation.
- */
-function toFloat(version: Version): Big {
-
-  // The first number does not have to be exactly three digits long, it'll be trimmed off anyway
-  const floatStr = `${version[0]}${toThreeDigits(version[1])}${toThreeDigits(version[2])}`;
-
-  const semverFloat = new Big(floatStr);
-  const aOrB = version[3];
-  if (!aOrB)
-    return semverFloat;
-
-  const preReleaseNum = 999 - (version[4] as number);
-  let preReleaseFloatStr: string;
-  if (aOrB === 'a')
-    preReleaseFloatStr = `.999${toThreeDigits(preReleaseNum)}`;
-  else
-    preReleaseFloatStr = `.${toThreeDigits(preReleaseNum)}999`;
-  const preReleaseFloat = new Big(preReleaseFloatStr);
-
-  return semverFloat.sub(preReleaseFloat);
-}
-
-/**
- * Convert a number string that is smaller than three digits in length to a fixed length of three digits
- * 
- * @param {number|string} num The number to bring to three digits.
- * @returns {string} The number as a three digit string.
- * @throws {Error} If the number is greater than three digits or is given an empty string.
- */
-function toThreeDigits(num: number | string): string {
-  if (typeof num === 'number')
-    num = num.toString();
-
-  if (num.length === 1)
-    return '00' + num;
-  else if (num.length === 2)
-    return '0' + num;
-  else if (num.length === 3)
-    return num;
-  else
-    throw new Error('Number too long');
-}
-
-/**
- * Convert a version to a string.
- * 
- * @param {Version} version The version to convert to a string.
- * @returns {string} The version represented as a string.
- */
-export function versionStr(version: Version): string {
-  let finalStr = version.slice(0, 3).join('.');
-  if (version[3])
-    finalStr += version.slice(3, 5).join('');
-  return finalStr;
 }

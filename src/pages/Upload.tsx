@@ -54,7 +54,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import '../css/Upload.scss';
 import { checkAuth, delToken } from '../scripts/tokenStorage';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
-import { isVersionValid } from '../scripts/validators';
+import Version from '../scripts/version';
 import axios, { AxiosError } from 'axios';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 
@@ -111,7 +111,7 @@ class Upload extends Component {
       errors.initialVersion = 'Version string required';
     else if (initialVersion.length > 15)
       errors.initialVersion = 'Version string too long';
-    else if (!isVersionValid(initialVersion))
+    else if (!Version.fromString(initialVersion))
       errors.initialVersion = 'Invalid version string';
     
     this.setState({

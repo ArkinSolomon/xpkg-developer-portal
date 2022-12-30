@@ -77,6 +77,10 @@ div.subrow-top-right {
 
 .upload-input-section {
 
+  &.extra-top-margin {
+    margin-top: 45px;
+  }
+
   &.flex-section {
     display: flex;
     align-items: stretch;
@@ -119,7 +123,6 @@ div.subrow-top-right {
   .right-third {
     display: inline-block;
     width: 33%;
-    margin-left: auto;
 
     &.other-borders {
       padding-left: 6px;

@@ -22,7 +22,7 @@
  * @property {PackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
  * @property {Partial<DescriptionValues?} descriptionErrors Any errors for the fields in the description update sub-form.
  * @property {Partial<NewVersionValues>} newVersionErrors Any errors for the fields in the new version sub-form.
- * @property {Omit<NewVersionValues, 'versionString'>} newVersionAccessConfig The values for the new version access config.
+ * @property {Omit<NewVersionValues, 'versionString' | 'xplaneVersion'>} newVersionAccessConfig The values for the new version access config.
  * @property {ConfirmPopupConfig} [popupConfig] Configuration for the popup.
  * @property {boolean} isPopupVisible True if the popup is visible.
  * @property {boolean} isFormSubmitting True if any form is being submitted.
@@ -39,7 +39,7 @@ type EditState = {
   currentPackageData?: PackageData;
   descriptionErrors: Partial<DescriptionValues>
   newVersionErrors: Partial<NewVersionValues>
-  newVersionAccessConfig: Omit<NewVersionValues, 'versionString'>;
+  newVersionAccessConfig: Omit<NewVersionValues, 'versionString' | 'xplaneVersion'>;
   popupConfig?: ConfirmPopupConfig;
   isPopupVisible: boolean;
   isFormSubmitting: boolean;
@@ -69,12 +69,14 @@ type DescriptionValues = {
  * @property {boolean} isPublic True if the package is public. 
  * @property {boolean} isPrivate True if the package is private.
  * @property {boolean} shouldApprove True if the package is to be submitted for approval.
+ * @property {string} xplaneVersion The versions of X-Plane the new version will be compatible with.
  */
 type NewVersionValues = {
   versionString: string;
   isPublic: boolean;
   isPrivate: boolean;
   shouldApprove: boolean;
+  xplaneVersion: string;
 };
 
 import { Component, ReactNode } from 'react';
@@ -95,9 +97,10 @@ import $ from 'jquery';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import InputCheckbox from '../components/Input/InputCheckbox';
-import { isVersionValid } from '../scripts/validators';
 import PackageList, { PackageListProps } from '../components/PackageList';
 import { nanoid } from 'nanoid';
+import SelectionChecker from '../scripts/selectionChecker';
+import Version from '../scripts/version';
 
 class Edit extends Component {
 
@@ -113,9 +116,9 @@ class Edit extends Component {
     super(props);
 
     this._originalDesc = '';
-    this._dependencies = [['', '']];
-    this._optionalDependencies = [['', '']];
-    this._incompatibilities = [['', '']];
+    this._dependencies = [];
+    this._optionalDependencies = [];
+    this._incompatibilities = [];
 
     const lists = this._genLists();
 
@@ -126,7 +129,7 @@ class Edit extends Component {
       isPopupVisible: false,
       isFormSubmitting: false,
       isDescriptionOriginal: true,
-      showNewVersionForm: false, // Set this to true for easier debugging
+      showNewVersionForm: true, // Set this to true for easier debugging
       newVersionAccessConfig: {
         isPublic: true,
         isPrivate: false,
@@ -260,8 +263,9 @@ class Edit extends Component {
     return {};
   }
 
-  validateNewVersion({ versionString }: NewVersionValues) {  
-    versionString = versionString.trim().toLowerCase();
+  validateNewVersion({ versionString, xplaneVersion }: NewVersionValues) {  
+    versionString = versionString.trim();
+    xplaneVersion = xplaneVersion.trim();
 
     const newVersionErrors: Partial<NewVersionValues> = {};
 
@@ -269,8 +273,16 @@ class Edit extends Component {
       newVersionErrors.versionString = 'Version string required';
     else if (versionString.length > 15)
       newVersionErrors.versionString = 'Version string too long';
-    else if (!isVersionValid(versionString))
+    else if (!Version.fromString(versionString))
       newVersionErrors.versionString = 'Invalid version string';
+    
+    const selectionChecker = new SelectionChecker(xplaneVersion);
+    if (xplaneVersion.length < 1)
+      newVersionErrors.xplaneVersion = 'X-Plane version required';
+    else if (xplaneVersion.length > 256)
+      newVersionErrors.xplaneVersion = 'X-Plane version too long';
+    else if (!selectionChecker.isValid)
+      newVersionErrors.xplaneVersion = 'Version selection invalid';
     
     this.setState({
       newVersionErrors
@@ -357,7 +369,8 @@ class Edit extends Component {
         versionString: '',
         isPublic: true,
         isPrivate: false,
-        shouldApprove: true
+        shouldApprove: true,
+        xplaneVersion: ''
       };
 
       return (
@@ -366,8 +379,8 @@ class Edit extends Component {
             <>
               <Formik
                 validate={this.validateDescription}
-                validateOnChange={true}
-                validateOnMount={true}
+                validateOnChange
+                validateOnMount
                 initialValues={{
                   description: this.state.currentPackageData?.description
                 } as DescriptionValues}
@@ -533,8 +546,8 @@ class Edit extends Component {
               <div className='upload-input-section top-margin'>
                 <Formik
                   validate={this.validateNewVersion}
-                  validateOnChange={true}
-                  validateOnMount={true}
+                  validateOnChange
+                  validateOnMount
                   initialValues={defaultNewVersionValues}
                   onSubmit={
                     async ({versionString, isPublic, isPrivate, shouldApprove}) => {
@@ -575,8 +588,11 @@ class Edit extends Component {
                     const xpCompatiblityFieldProps: InputFieldProps = {
                       title: 'X-Plane Compatiblity',
                       placeholder: 'x.x.x-x.x.x',
-                      name: 'xpCompatibility',
-                      width: '66%'
+                      name: 'xplaneVersion',
+                      minLength: 1,
+                      maxLength: 256,
+                      width: '66%',
+                      error: this.state.newVersionErrors.xplaneVersion
                     };
 
                     // This makes sure a user can't input invalid access config
@@ -637,7 +653,7 @@ class Edit extends Component {
                                   <InputField {...xpCompatiblityFieldProps} />
                                 </div>
                               </div>
-                              <div className='upload-input-section flex-section top-margin'>
+                              <div className='upload-input-section flex-section extra-top-margin'>
                                 <div className='left-third right-border'>
                                   <p>Dependencies</p>
                                   <div className='package-list'>
