@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ type PackageListChange = (index: number, packageId: string, versionSelection: st
  * The props for the package list.
  * 
  * @typedef {Object} PackageListProps 
- * @property {[string, string][]} initialValues A 2d array of data where it's a list of tuples wehre the first value is the package identifier string, and the second value is the version selection string. Empty rows should have empty data.
+ * @property {[string, string][]} initialValues A 2d array of data where it's a list of tuples where the first value is the package identifier string, and the second value is the version selection string. Empty rows should have empty data.
  * @property {PackageListChange} onChange The callback to execute when the value of a row is changed.
  */
 export type PackageListProps = {
@@ -40,6 +40,7 @@ import InputField, { InputFieldProps } from './Input/InputField';
 import '../css/PackageList.scss';
 import { Component, ReactNode } from 'react';
 import $ from 'jquery';
+import SelectionChecker from '../scripts/selectionChecker';
 
 // Using state here will cause the text fields to loose focus
 export default class PackageList extends Component {
@@ -83,6 +84,8 @@ export default class PackageList extends Component {
       const versionSelectFieldProps: InputFieldProps = {
         placeholder: 'x.x.x-x.x.x',
         width: '90%',
+        minLength: 1,
+        maxLength: 256,
         center: true,
         onChange: e => {
           const val = $(e.target).val() as string;
@@ -90,7 +93,7 @@ export default class PackageList extends Component {
           this._values[i] = [packageIdVal, val];
           props.onChange(i, packageIdVal, val);
         },
-        hiddenError: () => !this._values[i][1].length,
+        hiddenError: () => !this._values[i][1].length || !new SelectionChecker(this._values[i][1]).isValid,
         defaultValue: versionSelectValue,
         inputKey: versionSelectKey
       };

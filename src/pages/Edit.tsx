@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -310,12 +310,11 @@ class Edit extends Component {
 
       const tableConfig: TableProps<VersionData> = {
         columns: {
-          Version: 20,
-          Installs: 13,
-          Approved: 13,
-          Published: 13,
-          Private: 13,
-          'Uploaded Date': 28
+          Version: 25,
+          Installs: 15,
+          Public: 15,
+          Stored: 15,
+          'Uploaded Date': 30
         },
         data: [],
         subrowData: [],
@@ -325,17 +324,16 @@ class Edit extends Component {
               <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
               <p>{version.installs} installs</p>
               <p>Checksum: {version.hash}</p>
-              {version.private ? <p><a className='subrow-private-key-link' onClick={e => {
+              {!version.isPublic ? <p><a className='subrow-private-key-link' onClick={e => {
                 e.preventDefault(); 
                 $(e.target).parent().html(`Private key: ${version.privateKey}`);
               }}>Click to reveal private key</a></p> : void (0)}
               <div className='subrow-top-right'>
-                {!version.approved && version.private ? <button className='upload-button action-button'>Submit for approval</button> : void (0)}
-                {version.approved && version.private ? <button className='upload-button action-button'>Publish</button> : void (0)}
-                {!version.private && !version.published ? <button className='upload-button action-button' onClick={e => {
+                {version.isStored && !version.isPublic ? <button className='upload-button action-button'>Publish</button> : void (0)}
+                {!version.isStored ? <button className='upload-button action-button' onClick={e => {
                   e.preventDefault();
                 }}>Upload package</button> : void (0)}
-                {version.published || version.private ? <button className='upload-button action-button' onClick={e => {
+                {version.isStored ? <button className='upload-button action-button' onClick={e => {
                   e.preventDefault();
                   downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
                 }}>Download</button> : void (0)}
@@ -348,16 +346,11 @@ class Edit extends Component {
       if (this.state.currentPackageData){
         for (const version of this.state.currentPackageData.versions) {
 
-          let isApproved = version.approved ? 'Yes' : 'No';
-          if (!version.private && !version.published)
-            isApproved = 'N/A';  
-
           tableConfig.data.push([
             version.version,
             version.installs,
-            isApproved,
-            version.published ? 'Yes' : 'No',
-            version.private ? 'Yes' : 'No',
+            version.isPublic ? 'Yes' : 'No',
+            version.isStored ? 'Yes' : 'No',
             new Date(version.uploadDate).toLocaleString()
           ]);
 

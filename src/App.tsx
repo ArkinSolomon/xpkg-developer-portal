@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,9 @@
  * either express or implied limitations under the License.
  */
 import './css/reset.css';
+import './css/tailwind.css';
 import './css/index.scss';
+
 import Header from './components/Header';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 

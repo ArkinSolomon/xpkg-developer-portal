@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,23 @@ function InputCheckbox(props: {
   title: string;
   center?: boolean;
   onChange: ChangeEventHandler;
+  className?: string;
   defaultValue?: boolean;
   inline?: boolean; // Whether to display this element as a block level element or inline (default is inline)
   checked?: boolean;
+  disabled?: boolean;
 }) {
-  const classes = 'input input-checkbox' + (props.center ? ' center ' : ' ') + (!props.inline ? 'block' : '');
+  const classes = 'input input-checkbox' + (props.center ? ' center ' : ' ') + (!props.inline ? 'block' : '') + ' ' + props.className;
   return (
     <div className={classes}>
-      <input type='checkbox' name={props.name} onChange={props.onChange} defaultChecked={props.defaultValue} checked={props.checked} />
+      <input
+        type='checkbox'
+        name={props.name}
+        onChange={props.onChange}
+        defaultChecked={props.defaultValue}
+        checked={props.checked}
+        disabled={props.disabled}
+      />
       <label>{props.title}</label>
     </div>
   );

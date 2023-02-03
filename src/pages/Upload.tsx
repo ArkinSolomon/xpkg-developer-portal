@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,10 @@
  * @property {string} packageId The identifier of the package.
  * @property {string} packageType The type of the package.
  * @property {string} description The description of the package.
+ * @property {string} xplaneVersion The X-Plane compatibility version.
+ * @property {boolean} isPublic True if the package is public.
+ * @property {boolean} isPrivate True if the package is private.
+ * @property {boolean} isStored True if the package is stored in the registry. 
  */
 type UploadValues = {
   packageName: string;
@@ -28,6 +32,10 @@ type UploadValues = {
   packageType: string;
   description: string;
   initialVersion: string;
+  xplaneVersion: string;
+  isPublic: boolean;
+  isPrivate: boolean;
+  isStored: boolean;
 };
 
 /**
@@ -37,12 +45,18 @@ type UploadValues = {
  * @property {Object} errors The errors for each field, the same items in {@linkcode UploadValues}, but with all keys optional.
  * @property {string} [uploadError] Any error that occured after pressing the upload button.
  * @property {File} [file] The file to upload to the server.
+ * @property {JSX.Element} dependencyList The dependency list rendered. 
+ * @property {JSX.Element} optionalDependencyList The optional dependency list rendered.
+ * @property {JSX.Element} incompatibilityList The incompatibility list rendered.
  */
- type UploadState = {
-   errors: Partial<UploadValues>;
-   uploadError?: string;
-   file?: File;
-}
+type UploadState = {
+  errors: Partial<UploadValues>;
+  uploadError?: string;
+  file?: File;
+  dependencyList: JSX.Element
+  optionalDependencyList: JSX.Element;
+  incompatibilityList: JSX.Element;
+};
 
 import { Formik, FormikErrors } from 'formik';
 import { Component, ReactNode } from 'react';
@@ -57,6 +71,10 @@ import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import Version from '../scripts/version';
 import axios, { AxiosError } from 'axios';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
+import InputCheckbox from '../components/Input/InputCheckbox';
+import PackageList, { PackageListProps } from '../components/PackageList';
+import { nanoid } from 'nanoid';
+import SelectionChecker from '../scripts/selectionChecker';
 
 // Compute the default option
 const packageTypes = {
@@ -73,16 +91,32 @@ class Upload extends Component {
 
   state: UploadState;
 
+  private _isMounted = false;
+  private _dependencies: [string, string][];
+  private _optionalDependencies: [string, string][];
+  private _incompatibilities: [string, string][];
+
   constructor(props: Record<string, never>) {
     super(props);
 
+    this._dependencies = [];
+    this._optionalDependencies = [];
+    this._incompatibilities = [];
+
+    const lists = this._genLists();
+
     this.validate = this.validate.bind(this);
     this.state = {
-      errors: {}
+      errors: {},
+      ...lists
     };
   }
 
-  validate({ packageName, packageId, description, initialVersion }: UploadValues): FormikErrors<UploadValues> {
+  componentDidMount(): void {
+    this._isMounted = true;
+  }
+
+  validate({ packageName, packageId, description, initialVersion, xplaneVersion }: UploadValues): FormikErrors<UploadValues> {
     packageId = packageId.trim().toLowerCase();
     packageName = packageName.trim();
     description = description.trim();
@@ -114,11 +148,52 @@ class Upload extends Component {
     else if (!Version.fromString(initialVersion))
       errors.initialVersion = 'Invalid version string';
     
+    if (xplaneVersion.length < 1)
+      errors.xplaneVersion = 'X-Plane version selection required';
+    else if (xplaneVersion.length > 256)
+      errors.xplaneVersion = 'X-Plane version selection too long';
+    else if (!new SelectionChecker(xplaneVersion).isValid)
+      errors.xplaneVersion = 'X-Plane version selection invalid';
+    
     this.setState({
       errors,
-      uploadError: ''
+      uploadError: '',
     } as UploadState);
     return {};
+  }
+
+  private _genLists(): Pick<UploadState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> {
+
+    const dependencyListProps: PackageListProps = {
+      initialValues: this._dependencies,
+      onChange: (i, packageId, versionSelection) => {
+        this._dependencies[i] = [packageId, versionSelection];
+      }
+    };
+
+    const optionalDependencyList: PackageListProps = {
+      initialValues: this._optionalDependencies,
+      onChange: (i, packageId, versionSelection) => {
+        this._optionalDependencies[i] = [packageId, versionSelection];
+      }
+    };
+
+    const incompatibilityListProps: PackageListProps = {
+      initialValues: this._incompatibilities,
+      onChange: (i, packageId, versionSelection) => {
+        this._incompatibilities[i] = [packageId, versionSelection];
+      }
+    };
+
+    // Make sure to generate a random key each render, otherwise it'll be consistent and won't re-render
+    const newValues: Pick<UploadState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> = {
+      dependencyList: <PackageList {...dependencyListProps} key={nanoid(5)} />,
+      optionalDependencyList: <PackageList {...optionalDependencyList} key={nanoid(5)} />,
+      incompatibilityList: <PackageList {...incompatibilityListProps} key={nanoid(5)} />
+    };
+    if (this._isMounted) 
+      this.setState(newValues as Partial<UploadState>);
+    return newValues;
   }
 
   render(): ReactNode {
@@ -136,6 +211,10 @@ class Upload extends Component {
                 packageType: '',
                 description: '',
                 initialVersion: '1.0.0',
+                xplaneVersion: '',
+                isPublic: true,
+                isPrivate: false,
+                isStored: true,
                 file: void(0)
               } as UploadValues}
               onSubmit={
@@ -146,6 +225,8 @@ class Upload extends Component {
                   const packageType = (values.packageType || defaultPackage).trim().toLowerCase();
                   const description = values.description.trim();
                   const initialVersion = values.initialVersion.trim().toLowerCase(); 
+                  const xplaneVersion = values.xplaneVersion.trim().toLowerCase();
+                  const { isPublic, isPrivate, isStored } = values;
 
                   const formData = new FormData();
                   formData.append('packageId', packageId);
@@ -153,7 +234,14 @@ class Upload extends Component {
                   formData.append('packageType', packageType);
                   formData.append('description', description);
                   formData.append('initialVersion', initialVersion);
-
+                  formData.append('xplaneVersion', xplaneVersion);
+                  formData.append('isPublic', isPublic ? 'true' : 'false');
+                  formData.append('isPrivate', isPrivate ? 'true' : 'false');
+                  formData.append('isStored', isStored ? 'true' : 'false');
+                  formData.append('dependencies', JSON.stringify(this._dependencies));
+                  formData.append('optionalDependencies', JSON.stringify(this._optionalDependencies));
+                  formData.append('incompatibilities', JSON.stringify(this._incompatibilities));
+                  
                   // Types are broken for FormData
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formData.append('file', (document.getElementById('package-file') as any).files[0]);
@@ -186,9 +274,9 @@ class Upload extends Component {
                             long_name: 'Package name is too long',
                             short_desc: 'Description is too short',
                             long_desc: 'Description is too long',
-                            profane_id: 'Do not use profanity in package identifier, contact support if you believe this is in error',
-                            profane_name: 'Do not use profanity in package name, contact support if you believe this is in error',
-                            profane_desc: 'Do not use profanity in description, contact support if you believe this is in error',
+                            profane_id: 'Do not use profanity in package identifier (contact support if you believe this is in error)',
+                            profane_name: 'Do not use profanity in package name (contact support if you believe this is in error)',
+                            profane_desc: 'Do not use profanity in description (contact support if you believe this is in error)',
                             id_in_use: 'Package identifier already in use',
                             name_in_use: 'Package name already in use'
                           }[e.response?.data as string]
@@ -227,7 +315,9 @@ class Upload extends Component {
               {({
                 handleChange,
                 handleSubmit,
-                isSubmitting
+                values,
+                isSubmitting,
+                setFieldValue
               }) => {
 
                 // We need this due to TypeScript being weird
@@ -269,12 +359,14 @@ class Upload extends Component {
                   placeholder: 'x.x.x',
                   minLength: 1,
                   maxLength: 15,
-                  width: '25%',
+                  width: '66%',
                   defaultValue: '1.0.0',
                   error: this.state.errors.initialVersion
                 };
 
                 const inputFileProps: InputFileProps = {
+                  id: 'package-file',
+                  classes: ['float-right'],
                   label: 'Files',
                   name: 'file',
                   types: '.zip',
@@ -286,6 +378,36 @@ class Upload extends Component {
                     } as Partial<UploadState>);
                   }
                 };
+
+                const xpCompatiblityFieldProps: InputFieldProps = {
+                  title: 'X-Plane Compatiblity',
+                  placeholder: 'x.x.x-x.x.x',
+                  name: 'xplaneVersion',
+                  minLength: 1,
+                  maxLength: 256,
+                  width: '88%',
+                  error: this.state.errors.xplaneVersion
+                };
+
+                // Use `values` for previous state, and parameters for current state
+                const checkboxUpdated = ({ isPublic, isPrivate }: UploadValues) => {
+                  if (!values.isPrivate && isPrivate)
+                    setFieldValue('isPublic', false, false);
+                  
+                  if (!values.isPublic && isPublic) {
+                    setFieldValue('isPrivate', false, false);
+                    setFieldValue('isStored', true, false);
+                  }
+                  
+                  if (values.isPublic && !isPublic)
+                    setFieldValue('isPrivate', true, false);
+                  
+                  if (values.isPrivate && !isPrivate) {
+                    setFieldValue('isStored', true, false);
+                    setFieldValue('isPublic', true, false);
+                  }
+                };
+                const v = JSON.parse(JSON.stringify(values));
 
                 return (
                   <>
@@ -302,23 +424,119 @@ class Upload extends Component {
                           onChange={handleChange}
                         />
                       </div>
-                      <div className='upload-input-section top-margin bottom-margin'>
+                      <div className='upload-input-section mt-9 bottom-margin'>
                         <InputArea {...descTextAreaData} />
                       </div>
-                      <div className='upload-input-section top-margin'>
-                        <h2>Initial Package Release</h2>
-                        <div className='right-half'>
+                      <div className='upload-input-section mt-9'>
+                        <h2>Initial Package Version</h2>
+                        <div className='left-third'>
                           <InputField {...initialVersionField} />
                         </div>
-                        <div className='left-half'>
+                        <div className='middle-third'>
+                          <label className='access-config-label'>Access Config</label>
+                          <InputCheckbox className='ml-4' inline name="isPublic" title="Public" onChange={e => {
+                            v.isPublic = !v.isPublic;
+                            handleChange(e);
+                            checkboxUpdated(v);
+                          }} checked={values.isPublic} /> 
+                          <InputCheckbox className='ml-4' inline name="isPrivate" title="Private" onChange={e => {
+                            v.isPrivate = !v.isPrivate;
+                            handleChange(e);
+                            checkboxUpdated(v);
+                          }} checked={values.isPrivate} /> 
+                          <InputCheckbox className='ml-4' inline name="isStored" title="Is Saved" onChange={e => {
+                            v.isStored = !v.isStored;
+                            handleChange(e);
+                            checkboxUpdated(v);
+                          }} checked={values.isStored} disabled={values.isPublic} /> 
+                        </div>
+                        <div className='right-third'>
                           <InputFile {...inputFileProps}></InputFile>
                         </div>
                       </div>
-                      <div className='upload-input-section'>
+
+                      <div className='upload-input-section mt-9'>
+                        <div className='left-third'>
+                          <InputField {...xpCompatiblityFieldProps} />
+                        </div>  
+                        {/* We don't need the right half */}
+                      </div>
+                      <div className='upload-input-section flex-section mt-9'>
+                        <div className='left-third right-border'>
+                          <p>Dependencies</p>
+                          <div className='package-list'>
+                            {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
+                            {this.state.dependencyList}
+                          </div>
+                          <div className='package-list-buttons'>
+                            <button
+                              className='list-mod-button left'
+                              onClick={() => {
+                                this._dependencies.push(['', '']);
+                                this._genLists();
+                              }}
+                            >Add</button>
+                            <button
+                              className='list-mod-button right'
+                              onClick={() => {
+                                this._dependencies.pop();
+                                this._genLists();
+                              }}
+                            >Remove</button>
+                          </div>
+                        </div>
+                        <div className='middle-third right-border'>
+                          <p>Optional Dependencies</p>
+                          <div className='package-list'>
+                            {this._optionalDependencies.length === 0 && <p className='package-list-empty'>No optional dependencies</p>}
+                            {this.state.optionalDependencyList}
+                          </div>
+                          <div className='package-list-buttons'>
+                            <button
+                              className='list-mod-button left'
+                              onClick={() => {
+                                this._optionalDependencies.push(['', '']);
+                                this._genLists();
+                              }}
+                            >Add</button>
+                            <button
+                              className='list-mod-button right'
+                              onClick={() => {
+                                this._optionalDependencies.pop();
+                                this._genLists();
+                              }}
+                            >Remove</button>
+                          </div>
+                        </div>
+                        <div className='right-third other-borders'>
+                          <p>Incompatibilities</p>
+                          <div className='package-list'>
+                            {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
+                            {this.state.incompatibilityList}
+                          </div>
+                          <div className='package-list-buttons'>
+                            <button
+                              className='list-mod-button left'
+                              onClick={() => {
+                                this._incompatibilities.push(['', '']);
+                                this._genLists();
+                              }}
+                            >Add</button>
+                            <button
+                              className='list-mod-button right'
+                              onClick={() => {
+                                this._incompatibilities.pop();
+                                this._genLists();
+                              }}
+                            >Remove</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className='upload-input-section relative mt-9'>
                         <input
                           type="submit"
                           value="Upload"
-                          disabled={!this.state.file || isSubmitting || !!Object.keys(this.state.errors).length}
+                          disabled={isSubmitting || !!Object.keys(this.state.errors).length || !!this.state.uploadError || !this.state.file}
                         />
                       </div>
                     </form>

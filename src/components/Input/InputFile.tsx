@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,16 @@
  * @typedef {Object} InputFileProps
  * @property {string} label The label for the file.
  * @property {string} name The name for the input element.
+ * @property {string} [id] The id for the input element.
+ * @property {string} [classes] The classes to apply to the element.
  * @property {InputFileChangeCallback} onChange The function to execute on change.
- * @property {string|string[]} types The types for the file.
+ * @property {string|string[]} [types] The types for the file.
  */
 export type InputFileProps = {
   label: string;
   name: string;
+  id?: string;
+  classes?: string[];
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   types?: string | string[];
 };
@@ -51,16 +55,19 @@ export default function InputFile(props: InputFileProps): JSX.Element {
     typeString = ` [${types.join(', ')}]`;
   }
 
+  const classes = (props.classes ?? []).join(' ');
+
   const [fileName, setFileName] = useState('(no file selected)');
 
   return (
-    <div className="input-file">
+    <div className={'input-file ' + classes}>
       <p>{props.label + typeString ?? ''}</p>
       <label className="input">
         <input
           type="file"
           name={props.name}
           accept={accept}
+          id={props.id}
           onChange={e => {
             let fileName = '(no file selected)';
 

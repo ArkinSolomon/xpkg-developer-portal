@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,7 +202,7 @@ export default class SelectionChecker {
    * @param {Version} version Check if a version falls within a version selection.
    * @returns {boolean} True if the number is within the selection.
    */
-  isWithinRange(version: Version): boolean {
+  containsVersion(version: Version): boolean {
     for (const range of this._ranges) {
       const versionFloat = version.toFloat();
 

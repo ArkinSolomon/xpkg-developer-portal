@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,8 +139,8 @@ export default class Tools extends Component {
                 else if (!selectionChecker.isValid)
                   versionTesterErrors.testVersionSelection = 'Invalid version selection';
 
-                if (JSON.stringify(versionTesterErrors) === '{}') {
-                  const isWithinRange = selectionChecker.isWithinRange(testVersion as Version);
+                if (!Object.keys(versionTesterErrors).length) {
+                  const isWithinRange = selectionChecker.containsVersion(testVersion as Version);
                   
                   const ranges = selectionChecker.ranges;
                   let rangeStr = '';

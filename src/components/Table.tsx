@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,14 @@
  * @property {string[][]} data The data of the table's initial columns. First dimension is rows, second dimension is columns.
  * @property {T[]} subrowData The data for each subrow when expanded.
  * @property {(T) => ReactElement} subrowRender Render the data for a subrow.
+ * @property {string} emptyMessage The message to show up when the table data is empty.
  */
 export type TableProps<T> = {
   columns: Record<string, number>;
   data: string[][];
   subrowData: T[];
   subrowRender: (data: T) => ReactElement;
+  emptyMessage?: string;
 };
 
 /**
@@ -130,7 +132,12 @@ class Table<T> extends Component {
           <tr>{header}</tr>
         </thead>
         <tbody>
-          {tableData}
+          {props.data.length > 0 && tableData}
+          {
+            props.data.length === 0 && <td className='no-data-text table-subrow' colSpan={Object.keys(props.columns).length + 1}>
+              {props.emptyMessage || 'No data'}
+            </td>
+          }
         </tbody>
       </table>
     );

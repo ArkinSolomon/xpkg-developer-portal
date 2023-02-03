@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. X-Pkg Developer Portal Contributors.
+ * Copyright (c) 2022-2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,24 +69,22 @@ export type PackageData = {
  * @property {string} packageId The identifier of the package.
  * @property {string} version The semantic version string of the package.
  * @property {string} hash The hexadecimal hash of the package files.
- * @property {boolean} approved True if the version is approved.
- * @property {boolean} published True if the version has been published.
- * @property {boolean} private True if the version will be published later.
+ * @property {boolean} isPublic True if the version is public.
+ * @property {boolean} isStored True if the version is stored.
  * @property {string} loc The URL from which to download the package version.
  * @property {number} installs The number of installs for this version.
- * @property {string} uploadDate The upload time of the package as a string.
+ * @property {Date} uploadDate The upload time of the package.
  */
 export type VersionData = {
   packageId: string;
   version: string;
   hash: string;
-  approved: boolean;
-  published: boolean;
-  private: boolean;
+  isPublic: boolean;
+  isStored: boolean;
   loc: string;
   privateKey: string;
   installs: string;
-  uploadDate: string;
+  uploadDate: Date;
 };
 
 /**
@@ -122,7 +120,7 @@ import { postCB, downloadFile } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
 import '../css/SubrowStyles.scss';
-import Table from '../components/Table';
+import Table, { TableProps } from '../components/Table';
 import { nanoid } from 'nanoid';
 import $ from 'jquery';
 
@@ -250,27 +248,23 @@ class Packages extends Component {
                 columns,
                 data,
                 subrowData,
+                emptyMessage: 'No packages',
                 subrowRender: (pkg: PackageData): ReactElement => {
 
                   const versions = [] as ReactElement[];
                   for (const version of pkg.versions) {
 
-                    let isApproved = version.approved ? 'Yes' : 'No';
-                    if (!version.private && !version.published)
-                      isApproved = 'N/A';  
-
                     versions.push(
                       <tr key={nanoid()}>
                         <td>{version.version}</td>
                         <td>{version.installs}</td>
-                        <td>{isApproved}</td>
-                        <td>{version.published ? 'Yes' : 'No'}</td>
-                        <td>{version.private ? <a className='subtable-link' onClick={e => {
+                        <td>{version.isPublic ? 'Yes' : 'No'}</td>
+                        <td>{!version.isPublic ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
                           $(e.target).parent().text(version.privateKey);
                           
                         }}>Click to reveal</a> : '---'}</td>
-                        <td>{version.private || version.published ? <a className='subtable-link' onClick={e => {
+                        <td>{version.isStored ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
                           downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
                         }}>Download</a> : '---'}</td>
@@ -293,8 +287,7 @@ class Packages extends Component {
                             <tr>
                               <th>Version</th>
                               <th>Installs</th>
-                              <th>Approved</th>
-                              <th>Published</th>
+                              <th>Public</th>
                               <th>Private Key</th>
                               <th>Download</th>
                             </tr>
@@ -307,7 +300,7 @@ class Packages extends Component {
                     </div>
                   );
                 }
-              };
+              } as TableProps<PackageData>;
 
               return (
 
