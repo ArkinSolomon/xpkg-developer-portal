@@ -219,6 +219,7 @@ class Upload extends Component {
               } as UploadValues}
               onSubmit={
                 async (values, { setSubmitting }) => {
+                  setSubmitting(true);
                 
                   const packageId = values.packageId.trim().toLowerCase();
                   const packageName = values.packageName.trim();
@@ -266,21 +267,21 @@ class Upload extends Component {
                       case 400:
                         this.setState({
                           uploadError: {
-                            missing_form_data: 'How did you manage this? 0_o',
-                            short_id: 'Package identifier is too short',
-                            long_id: 'Package identifier is too long',
-                            invalid_id: 'Package identifier uses invalid characters',
-                            short_name: 'Package name is too short',
-                            long_name: 'Package name is too long',
-                            short_desc: 'Description is too short',
-                            long_desc: 'Description is too long',
-                            profane_id: 'Do not use profanity in package identifier (contact support if you believe this is in error)',
-                            profane_name: 'Do not use profanity in package name (contact support if you believe this is in error)',
-                            profane_desc: 'Do not use profanity in description (contact support if you believe this is in error)',
-                            id_in_use: 'Package identifier already in use',
-                            name_in_use: 'Package name already in use'
+                            missing_form_data: 'missing form data.',
+                            short_id: 'package identifier is too short',
+                            long_id: 'package identifier is too long',
+                            invalid_id: 'package identifier uses invalid characters',
+                            short_name: 'package name is too short',
+                            long_name: 'package name is too long',
+                            short_desc: 'description is too short',
+                            long_desc: 'description is too long',
+                            profane_id: 'do not use profanity in package identifier (contact support if you believe this is in error)',
+                            profane_name: 'do not use profanity in package name (contact support if you believe this is in error)',
+                            profane_desc: 'do not use profanity in description (contact support if you believe this is in error)',
+                            id_in_use: 'package identifier already in use',
+                            name_in_use: 'package name already in use'
                           }[e.response?.data as string]
-                            ?? ('Unkown issue with form: ' + e.response?.data as string)
+                            ?? ('unkown issue with form: ' + e.response?.data as string)
                         } as Partial<UploadState>);
                         break;
                       case 401:
