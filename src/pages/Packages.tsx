@@ -123,6 +123,8 @@ import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Table';
 import { nanoid } from 'nanoid';
 import $ from 'jquery';
+import Version from '../scripts/version';
+import Big from 'big.js';
 
 class Packages extends Component {
 
@@ -171,8 +173,19 @@ class Packages extends Component {
         return this.setState({ errorMessage } as Partial<PackagesState>);
       }
 
+      // We need to spread so that we can update the sub properties (data.packages instead of updating data all at once)
       const data = { ...this.state.data };
       data.packages = JSON.parse(res.response);
+
+      data.packages?.forEach(pkg => {
+        pkg.versions.sort((a, b) => {
+          const aVer = Version.fromString(a.version);
+          const bVer = Version.fromString(b.version);
+
+          // Flipping a and b reverses the sort
+          return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+        });
+      });
 
       this.setState({
         errorMessage: void (0),
@@ -259,10 +272,9 @@ class Packages extends Component {
                         <td>{version.version}</td>
                         <td>{version.installs}</td>
                         <td>{version.isPublic ? 'Yes' : 'No'}</td>
-                        <td>{!version.isPublic ? <a className='subtable-link' onClick={e => {
+                        <td>{!version.isPublic && version.isStored ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
                           $(e.target).parent().text(version.privateKey);
-                          
                         }}>Click to reveal</a> : '---'}</td>
                         <td>{version.isStored ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();

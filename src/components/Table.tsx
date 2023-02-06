@@ -48,6 +48,9 @@ import '../css/Table.scss';
 import $ from 'jquery';
 import { nanoid } from 'nanoid';
 
+/**
+ * An expandable table.
+ */
 class Table<T> extends Component {
   
   state: TableState<T>;
@@ -63,9 +66,11 @@ class Table<T> extends Component {
   componentDidMount(): void {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
+
     $('.expand-button').on('click', function () {
-      if (typeof that.state.currentSubrowData === 'undefined') {
-        const index = parseInt(this.getAttribute('data-index') as string, 10);
+      const index = parseInt(this.getAttribute('data-index') as string, 10);
+      if (that.state.r !== index) {
+
         that.setState({
           currentSubrowData: (that.props as TableProps<T>).subrowData[index],
           r: index
@@ -76,7 +81,6 @@ class Table<T> extends Component {
           r: void (0)
         } as Partial<TableState<T>>);
       }
-
     });
   }
 
@@ -104,12 +108,13 @@ class Table<T> extends Component {
         d.push(<td style={style} key={nanoid()}>{row[i]}</td>);
       }
   
+      const rInt = parseInt(r, 10);
       d.push(<td
         className='expand-button'
         data-index={r}
         key={nanoid(10)}
         dangerouslySetInnerHTML={{
-          __html: typeof this.state.currentSubrowData === 'undefined' ? '+' : '&#8211;'
+          __html: typeof this.state.currentSubrowData === 'undefined' || this.state.r !== rInt ? '+' : '&#8211;'
         }}
       />);
       tableData.push(<tr key={nanoid()}>{d}</tr>);

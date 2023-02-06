@@ -103,6 +103,7 @@ import SelectionChecker from '../scripts/selectionChecker';
 import Version from '../scripts/version';
 import { checkAuth } from '../scripts/tokenStorage';
 import axios, { AxiosError } from 'axios';
+import Big from 'big.js';
 
 class Edit extends Component {
 
@@ -226,6 +227,14 @@ class Edit extends Component {
       const currentPackageData = (JSON.parse(res.response) as PackageData[])
         .find(pkg => pkg.packageId === packageId);
       
+      currentPackageData?.versions.sort((a, b) => {
+        const aVer = Version.fromString(a.version);
+        const bVer = Version.fromString(b.version);
+
+        // Flipping a and b reverses the sort
+        return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+      });
+      
       if (!currentPackageData) {
         this.setState({
           errorMessage: 'Package does not exist',
@@ -326,15 +335,18 @@ class Edit extends Component {
               <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
               <p>{version.installs} installs</p>
               <p>Checksum: {version.hash}</p>
+
               {!version.isPublic ? <p><a className='subrow-private-key-link' onClick={e => {
                 e.preventDefault(); 
                 $(e.target).parent().html(`Private key: ${version.privateKey}`);
               }}>Click to reveal private key</a></p> : void (0)}
+
               <div className='subrow-top-right'>
                 {version.isStored && !version.isPublic ? <button className='upload-button action-button'>Publish</button> : void (0)}
                 {!version.isStored ? <button className='upload-button action-button' onClick={e => {
                   e.preventDefault();
                 }}>Upload package</button> : void (0)}
+
                 {version.isStored ? <button className='upload-button action-button' onClick={e => {
                   e.preventDefault();
                   downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
