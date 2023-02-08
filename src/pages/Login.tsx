@@ -50,6 +50,7 @@ import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
 import ErrorMessage from '../components/ErrorMessage';
 import * as util from '../scripts/validators';
+import HTTPMethod from 'http-method-enum';
 
 class Login extends Component {
   constructor(props: Record<string, never>) {
@@ -94,7 +95,7 @@ class Login extends Component {
               errorMessage: ''
             });
             const { email, password } = values;
-            http.postCB('http://localhost:5020/auth/login', void (0), { email, password }, (err, r) => {
+            http.httpRequest('http://localhost:5020/auth/login', HTTPMethod.POST, void (0), { email, password }, (err, r) => {
               setSubmitting(false);
               if (err)
                 return console.error(err);

@@ -13,43 +13,51 @@
  * either express or implied limitations under the License.
  */
 
+import HTTPMethod from 'http-method-enum';
+
 /**
  * Make an HTTP post request asynchronously, executing a callback after completion.
  * 
  * @param {string} url The URL to make the request to.
+ * @param {HTTPMethod} method The http method to use.
  * @param {string} [authorization=] The token to send in the authorization, null if no token.
  * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
  * @param {(err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void} cb The callback to execute after the operation completes.
  */
-export function postCB(url: string, authorization: string|undefined, body: Record<string, string>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void {
-  const xhttp = new XMLHttpRequest();
-  xhttp.onload = function () {
-    cb(void (0), this);
-  };
-  xhttp.onerror = ev => cb(ev, undefined);
-  xhttp.open('POST', url, true);
-  if (authorization)
-    xhttp.setRequestHeader('Authorization', authorization);
-  xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  xhttp.send(encodeURIObject(body));
-}
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void;
 
 /**
  * Make an HTTP post request asynchronously, returning a promise. 
  * 
  * @param {string} url The URL to make the request to.
+ * @param {'PUT'|'PATCH'|'POST'|'GET'|'DELETE'} method The http method
  * @param {string} [authorization=] The token to send in the authorization, null if no token.
  * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
  * @return {Promise<XMLHttpRequest>} The request after it completes, or errors.
  */
-export async function post(url: string, authorization: string|undefined, body: Record<string, string>): Promise<XMLHttpRequest> {
-  return new Promise((resolve, reject) => {
-    postCB(url, authorization, body, (err, res) => {
-      if (err)
-        return reject(err);
-      resolve(res as XMLHttpRequest);
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>): Promise<XMLHttpRequest>;
+
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>, cb?: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): Promise<XMLHttpRequest> | void
+{
+  if (cb) {
+    const xhttp = new XMLHttpRequest();
+    xhttp.onload = function () {
+      cb(void (0), this);
+    };
+    xhttp.onerror = ev => cb(ev, undefined);
+    xhttp.open(method, url, true);
+    if (authorization)
+      xhttp.setRequestHeader('Authorization', authorization);
+    xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhttp.send(encodeURIObject(body));
+  } else 
+    return new Promise((resolve, reject) => {
+      httpRequest(url, method, authorization, body, (err, res) => {
+        if (err)
+          return reject(err);
+        resolve(res as XMLHttpRequest);
+      });
     });
-  });
 }
 
 /**

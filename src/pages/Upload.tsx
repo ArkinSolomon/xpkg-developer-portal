@@ -75,6 +75,7 @@ import InputCheckbox from '../components/Input/InputCheckbox';
 import PackageList, { PackageListProps } from '../components/PackageList';
 import { nanoid } from 'nanoid';
 import SelectionChecker from '../scripts/selectionChecker';
+import { validateId } from '../scripts/validators';
 
 // Compute the default option
 const packageTypes = {
@@ -128,7 +129,7 @@ class Upload extends Component {
       errors.packageId = 'Package identifier too short';
     else if (packageId.length > 32)
       errors.packageId = 'Package identifier too short';
-    else if (!/^[a-z0-9_.]+$/i.test(packageId)) 
+    else if (!validateId(packageId)) 
       errors.packageId = 'Package identifier has invalid characters';
       
     if (packageName.length < 3)

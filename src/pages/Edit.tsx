@@ -85,7 +85,7 @@ import MainContainerRightLoading from '../components/Main Container/MainContaine
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import * as tokenStorage from '../scripts/tokenStorage';
-import { downloadFile, postCB } from '../scripts/http';
+import { downloadFile, httpRequest } from '../scripts/http';
 import { PackageData, VersionData } from './Packages';
 import { Formik, FormikErrors } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
@@ -98,12 +98,13 @@ import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import InputCheckbox from '../components/Input/InputCheckbox';
 import PackageList, { PackageListProps } from '../components/PackageList';
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import SelectionChecker from '../scripts/selectionChecker';
 import Version from '../scripts/version';
 import { checkAuth } from '../scripts/tokenStorage';
 import axios, { AxiosError } from 'axios';
 import Big from 'big.js';
+import HTTPMethod from 'http-method-enum';
 
 class Edit extends Component {
 
@@ -132,7 +133,7 @@ class Edit extends Component {
       isPopupVisible: false,
       isFormSubmitting: false,
       isDescriptionOriginal: true,
-      showNewVersionForm: true, // Set this to true for easier debugging
+      showNewVersionForm: false, // Set this to true for easier debugging
       newVersionAccessConfig: {
         isPublic: true,
         isPrivate: false,
@@ -204,7 +205,7 @@ class Edit extends Component {
       isLoading: false
     });
 
-    postCB('http://localhost:5020/account/packages', token , { }, (err, res) => {
+    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'
@@ -403,7 +404,7 @@ class Edit extends Component {
                           isFormSubmitting: true
                         } as EditState); 
                         
-                        postCB('http://localhost:5020/packages/description', tokenStorage.checkAuth() as string, {
+                        httpRequest('http://localhost:5020/packages/description', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
                           newDescription: description,
                           packageId: this.state.currentPackageData?.packageId as string
                         }, (err, res) => {
@@ -557,7 +558,7 @@ class Edit extends Component {
                   validateOnMount
                   initialValues={defaultNewVersionValues}
                   onSubmit={
-                    async (values, {setSubmitting}) => {
+                    async (values, { setSubmitting }) => {
                       setSubmitting(true);
                 
                       const versionString = values.versionString.trim().toLowerCase(); 
@@ -580,20 +581,18 @@ class Edit extends Component {
                       try {
                         await axios({
                           url: 'http://localhost:5020/packages/newversion',
-                          method: 'POST',
+                          method: HTTPMethod.POST,
                           data: formData,
                           headers: {
                             Authorization: checkAuth() as string
                           }
                         });
+                        console.log('post-req');
                         window.location.href = '/packages?s=' + encodeURIComponent(btoa('Uploaded new package version successfully'));
                       } catch (e) {
-                        if (!(e instanceof AxiosError)) {
-                          this.setState({
-                            // TODO
-                          } as Partial<EditState>);
-                        } else {
-                          let errMsg = 'an unknown error occured.';
+                        let errMsg = 'an unknown error occured.';
+                        
+                        if (e instanceof AxiosError) {
                           switch (e.response?.status) {
                           case 400:
                             errMsg = {
@@ -603,30 +602,36 @@ class Edit extends Component {
                               invalid_version: 'the version provided is invalid',
                               version_exists: 'the version provided already exists.'
                             }[e.response?.data as string]
-                                ?? `an unknown error occured [${e.response?.data}].`;
+                                  ?? `an unknown error occured [${e.response?.data}].`;
                             break;
                           case 403:
                             errMsg = `you do not own the package ${this.state.currentPackageData?.packageId as string}.`;
                             break;
+                          case 422:
+                            errMsg = 'invalid package file.';
+                            break;
+                          case 500:
+                            errMsg = 'an internal server error occured.';
+                            break;
                           }
-
-                          const popupConfig: ConfirmPopupConfig = {
-                            title: 'Upload failed',
-                            showClose: false,
-                            confirmText: 'Ok',
-                            onClose: () => {
-                              this.setState({
-                                isPopupVisible: false
-                              } as Partial<EditState>);
-                            },
-                            children: <p className='generic-popup-text'>Could not upload new package version, { errMsg }</p>
-                          };
-                          
-                          this.setState({
-                            popupConfig,
-                            isPopupVisible: true
-                          } as Partial<EditState>);
                         }
+
+                        const popupConfig: ConfirmPopupConfig = {
+                          title: 'Upload failed',
+                          showClose: false,
+                          confirmText: 'Ok',
+                          onClose: () => {
+                            this.setState({
+                              isPopupVisible: false
+                            } as Partial<EditState>);
+                          },
+                          children: <p className='generic-popup-text'>Could not upload new package version, { errMsg }</p>
+                        };
+                          
+                        this.setState({
+                          popupConfig,
+                          isPopupVisible: true
+                        } as Partial<EditState>);
                       } finally {
                         setSubmitting(false);
                       }
@@ -642,7 +647,7 @@ class Edit extends Component {
 
                     const versionStringField: InputFieldProps = {
                       name: 'versionString',
-                      title: 'Intitial Version',
+                      title: 'Version String',
                       placeholder: 'x.x.x',
                       minLength: 1,
                       maxLength: 15,
@@ -696,121 +701,135 @@ class Edit extends Component {
 
                     return (
                       <>
-                        <form onSubmit={handleSubmit} onChange={handleChange}>
-                          <div className='upload-input-section mt-9'>
-                            <h2>Upload a New Version</h2>
-                            <div className='left-third'>
-                              <InputField {...versionStringField} />
+                        {!this.state.showNewVersionForm && 
+                          <button className='upload-button action-button' onClick={() => this.setState({showNewVersionForm: true} as Partial<EditState>)}>Upload new version</button>
+                        }
+                        {this.state.showNewVersionForm &&  <>
+                          <form onSubmit={handleSubmit} onChange={handleChange}>
+                            <div className='upload-input-section mt-9'>
+                              <h2>Upload a New Version</h2>
+                              <div className='left-third'>
+                                <InputField {...versionStringField} />
+                              </div>
+                              <div className='middle-third'>
+                                <label className='access-config-label'>Access Config</label>
+                                <InputCheckbox className='ml-4' inline name="isPublic" title="Public" onChange={e => {
+                                  v.isPublic = !v.isPublic;
+                                  handleChange(e);
+                                  checkboxUpdated(v);
+                                }} checked={values.isPublic} />
+                                <InputCheckbox className='ml-4' inline name="isPrivate" title="Private" onChange={e => {
+                                  v.isPrivate = !v.isPrivate;
+                                  handleChange(e);
+                                  checkboxUpdated(v);
+                                }} checked={values.isPrivate} />
+                                <InputCheckbox className='ml-4' inline name="isStored" title="Is Saved" onChange={e => {
+                                  v.isStored = !v.isStored;
+                                  handleChange(e);
+                                  checkboxUpdated(v);
+                                }} checked={values.isStored} disabled={values.isPublic} />
+                              </div>
+                              <div className='right-third'>
+                                <InputFile {...fileUploadProps}></InputFile>
+                              </div>
                             </div>
-                            <div className='middle-third'>
-                              <label className='access-config-label'>Access Config</label>
-                              <InputCheckbox className='ml-4' inline name="isPublic" title="Public" onChange={e => {
-                                v.isPublic = !v.isPublic;
-                                handleChange(e);
-                                checkboxUpdated(v);
-                              }} checked={values.isPublic} />
-                              <InputCheckbox className='ml-4' inline name="isPrivate" title="Private" onChange={e => {
-                                v.isPrivate = !v.isPrivate;
-                                handleChange(e);
-                                checkboxUpdated(v);
-                              }} checked={values.isPrivate} />
-                              <InputCheckbox className='ml-4' inline name="isStored" title="Is Saved" onChange={e => {
-                                v.isStored = !v.isStored;
-                                handleChange(e);
-                                checkboxUpdated(v);
-                              }} checked={values.isStored} disabled={values.isPublic} />
-                            </div>
-                            <div className='right-third'>
-                              <InputFile {...fileUploadProps}></InputFile>
-                            </div>
-                          </div>
 
-                          <div className='upload-input-section mt-9'>
-                            <div className='left-third'>
-                              <InputField {...xpCompatiblityFieldProps} />
+                            <div className='upload-input-section mt-9'>
+                              <div className='left-third'>
+                                <InputField {...xpCompatiblityFieldProps} />
+                              </div>
+                              {/* We don't need the right half */}
                             </div>
-                            {/* We don't need the right half */}
-                          </div>
-                          <div className='upload-input-section flex-section mt-9'>
-                            <div className='left-third right-border'>
-                              <p>Dependencies</p>
-                              <div className='package-list'>
-                                {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
-                                {this.state.dependencyList}
+                            <div className='upload-input-section flex-section mt-9'>
+                              <div className='left-third right-border'>
+                                <p>Dependencies</p>
+                                <div className='package-list'>
+                                  {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
+                                  {this.state.dependencyList}
+                                </div>
+                                <div className='package-list-buttons'>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button left'
+                                    onClick={() => {
+                                      this._dependencies.push(['', '']);
+                                      this._genLists();
+                                    }}
+                                  >Add</button>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button right'
+                                    onClick={() => {
+                                      this._dependencies.pop();
+                                      this._genLists();
+                                    }}
+                                    disabled={!this._dependencies.length}
+                                  >Remove</button>
+                                </div>
                               </div>
-                              <div className='package-list-buttons'>
-                                <button
-                                  className='list-mod-button left'
-                                  onClick={() => {
-                                    this._dependencies.push(['', '']);
-                                    this._genLists();
-                                  }}
-                                >Add</button>
-                                <button
-                                  className='list-mod-button right'
-                                  onClick={() => {
-                                    this._dependencies.pop();
-                                    this._genLists();
-                                  }}
-                                >Remove</button>
+                              <div className='middle-third right-border'>
+                                <p>Optional Dependencies</p>
+                                <div className='package-list'>
+                                  {this._optionalDependencies.length === 0 && <p className='package-list-empty'>No optional dependencies</p>}
+                                  {this.state.optionalDependencyList}
+                                </div>
+                                <div className='package-list-buttons'>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button left'
+                                    onClick={() => {
+                                      this._optionalDependencies.push(['', '']);
+                                      this._genLists();
+                                    }}
+                                  >Add</button>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button right'
+                                    onClick={() => {
+                                      this._optionalDependencies.pop();
+                                      this._genLists();
+                                    }}
+                                    disabled={!this._optionalDependencies.length}
+                                  >Remove</button>
+                                </div>
+                              </div>
+                              <div className='right-third other-borders'>
+                                <p>Incompatibilities</p>
+                                <div className='package-list'>
+                                  {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
+                                  {this.state.incompatibilityList}
+                                </div>
+                                <div className='package-list-buttons'>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button left'
+                                    onClick={() => {
+                                      this._incompatibilities.push(['', '']);
+                                      this._genLists();
+                                    }}
+                                  >Add</button>
+                                  <button
+                                    type='button'
+                                    className='list-mod-button right'
+                                    onClick={() => {
+                                      this._incompatibilities.pop();
+                                      this._genLists();
+                                    }}
+                                    disabled={!this._incompatibilities.length}
+                                  >Remove</button>
+                                </div>
                               </div>
                             </div>
-                            <div className='middle-third right-border'>
-                              <p>Optional Dependencies</p>
-                              <div className='package-list'>
-                                {this._optionalDependencies.length === 0 && <p className='package-list-empty'>No optional dependencies</p>}
-                                {this.state.optionalDependencyList}
-                              </div>
-                              <div className='package-list-buttons'>
-                                <button
-                                  className='list-mod-button left'
-                                  onClick={() => {
-                                    this._optionalDependencies.push(['', '']);
-                                    this._genLists();
-                                  }}
-                                >Add</button>
-                                <button
-                                  className='list-mod-button right'
-                                  onClick={() => {
-                                    this._optionalDependencies.pop();
-                                    this._genLists();
-                                  }}
-                                >Remove</button>
-                              </div>
+                            <div className='upload-input-section relative mt-9'>
+                              <input
+                                type="submit"
+                                value="Upload"
+                                disabled={isSubmitting || !!Object.keys(this.state.newVersionErrors).length || !!this.state.errorMessage || !this.state.newVersionFile}
+                              />
                             </div>
-                            <div className='right-third other-borders'>
-                              <p>Incompatibilities</p>
-                              <div className='package-list'>
-                                {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
-                                {this.state.incompatibilityList}
-                              </div>
-                              <div className='package-list-buttons'>
-                                <button
-                                  className='list-mod-button left'
-                                  onClick={() => {
-                                    this._incompatibilities.push(['', '']);
-                                    this._genLists();
-                                  }}
-                                >Add</button>
-                                <button
-                                  className='list-mod-button right'
-                                  onClick={() => {
-                                    this._incompatibilities.pop();
-                                    this._genLists();
-                                  }}
-                                >Remove</button>
-                              </div>
-                            </div>
-                          </div>
-                          <div className='upload-input-section relative mt-9'>
-                            <input
-                              type="submit"
-                              value="Upload"
-                              disabled={isSubmitting || !!Object.keys(this.state.newVersionErrors).length || !!this.state.errorMessage || !this.state.newVersionFile}
-                            />
-                          </div>
-                        </form>
-
+                          </form>
+                        </>
+                        }
                       </>
                     );
                   }}

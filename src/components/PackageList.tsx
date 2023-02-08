@@ -35,12 +35,13 @@ export type PackageListProps = {
   onChange: PackageListChange;
 };
 
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
 import InputField, { InputFieldProps } from './Input/InputField';
 import '../css/PackageList.scss';
 import { Component, ReactNode } from 'react';
 import $ from 'jquery';
 import SelectionChecker from '../scripts/selectionChecker';
+import { validateId } from '../scripts/validators';
 
 // Using state here will cause the text fields to loose focus
 export default class PackageList extends Component {
@@ -76,11 +77,14 @@ export default class PackageList extends Component {
           this._values[i] = [val, selectionVal];
           props.onChange(i, val, selectionVal);
         },
-        hiddenError: () => !this._values[i][0].length,
+        hiddenError: () => {
+          const val = $('#' + packageIdKey).val() as (string | undefined) ?? packageIdValue;
+          return !val || !val.length || !validateId(val);
+        },
         defaultValue: packageIdValue,
         inputKey: packageIdKey
       };
-  
+      
       const versionSelectFieldProps: InputFieldProps = {
         placeholder: 'x.x.x-x.x.x',
         width: '90%',
@@ -93,7 +97,10 @@ export default class PackageList extends Component {
           this._values[i] = [packageIdVal, val];
           props.onChange(i, packageIdVal, val);
         },
-        hiddenError: () => !this._values[i][1].length || !new SelectionChecker(this._values[i][1]).isValid,
+        hiddenError: () => {
+          const val = $('#' + versionSelectKey).val() as (string | undefined) ?? versionSelectValue;
+          return !val || !val.length || !new SelectionChecker(val).isValid;
+        },
         defaultValue: versionSelectValue,
         inputKey: versionSelectKey
       };

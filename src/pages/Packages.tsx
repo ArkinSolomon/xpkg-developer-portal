@@ -116,7 +116,7 @@ import MainContainerRight from '../components/Main Container/MainContainerRight'
 import MainContainerRightError from '../components/Main Container/MainContainerRightError';
 import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 import SideBar from '../components/SideBar';
-import { postCB, downloadFile } from '../scripts/http';
+import {  downloadFile, httpRequest } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
 import '../css/SubrowStyles.scss';
@@ -125,6 +125,7 @@ import { nanoid } from 'nanoid';
 import $ from 'jquery';
 import Version from '../scripts/version';
 import Big from 'big.js';
+import HTTPMethod from 'http-method-enum';
 
 class Packages extends Component {
 
@@ -156,7 +157,7 @@ class Packages extends Component {
 
   componentDidMount(): void {
     const token = tokenStorage.checkAuth() as string;
-    postCB('http://localhost:5020/account/packages', token , { }, (err, res) => {
+    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'

@@ -56,6 +56,7 @@ import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
 import ErrorMessage from '../components/ErrorMessage';
 import * as util from '../scripts/validators';
+import HTTPMethod from 'http-method-enum';
 
 class Create extends Component {
   constructor(props: Record<string, never>) {
@@ -104,7 +105,7 @@ class Create extends Component {
               errorMessage: ''
             });
             const { email, password, name } = values;
-            http.postCB('http://localhost:5020/auth/create', void (0), { email, password, name }, (err, r) => {
+            http.httpRequest('http://localhost:5020/auth/create',HTTPMethod.POST, void (0), { email, password, name }, (err, r) => {
               setSubmitting(false);
               if (err) {
                 this.setState({

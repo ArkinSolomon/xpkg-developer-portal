@@ -62,13 +62,14 @@ import MainContainer from '../components/Main Container/MainContainer';
 import '../css/Account.scss';
 import 'reactjs-popup/dist/index.css';
 import * as tokenStorage from '../scripts/tokenStorage';
-import { postCB } from '../scripts/http';
+import { httpRequest } from '../scripts/http';
 import * as util from '../scripts/validators';
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import InputField from '../components/Input/InputField';
 import { Formik, FormikErrors } from 'formik';
 import * as SB from '../components/SideBar';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
+import HTTPMethod from 'http-method-enum';
 const { default: SideBar } = SB;
 
 class Account extends Component {
@@ -104,7 +105,7 @@ class Account extends Component {
 
     // This request will fire twice in development, during production it'll be fine
     const token = tokenStorage.checkAuth() as string;
-    postCB('http://localhost:5020/account/data', token, {}, (err, resp) => {
+    httpRequest('http://localhost:5020/account/data', HTTPMethod.GET, token, {}, (err, resp) => {
       if (err || resp?.status !== 200) {
       
         if (resp?.status === 401) {
@@ -200,7 +201,7 @@ class Account extends Component {
                     // Force a rerender of the basic information page to gray out the change button
                   } as AccountState, () => this.updateRendered(this.basicInformation()));
       
-                  postCB('http://localhost:5020/account/changeName', tokenStorage.checkAuth() as string, {
+                  httpRequest('http://localhost:5020/account/changeName', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
                     newName: this.state.nameValue,
                   }, (err, res) => {
                     if (err)

@@ -46,3 +46,13 @@ export function validatePassword(password: string): boolean {
 export function validateName(name: string): boolean {
   return (name && typeof name === 'string' && name.length > 3 && name.length <= 32) as boolean;
 }
+
+/**
+ * Check if a package id is valid. Same funcion as in /routes/packages.ts on the registry.
+ * 
+ * @param {string} id The package id to check.
+ * @returns {boolean} True if the package id is valid, otherwise false.
+ */
+export function validateId(id: string): boolean {
+  return (id && /^[a-z]([a-z]|[_\-.]|\d){5,31}$/i.test(id)) as boolean;
+}

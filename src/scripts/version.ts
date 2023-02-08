@@ -160,7 +160,6 @@ export default class Version {
       semanticPart = parts[0];
       const aOrBNumPart = parts[1];
 
-      console.log(semanticPart);
       if (semanticPart.endsWith('.'))
         return;
 
