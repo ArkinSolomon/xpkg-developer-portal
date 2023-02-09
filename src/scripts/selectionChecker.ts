@@ -120,18 +120,34 @@ export default class SelectionChecker {
         }
 
         const version = versionParts[0].trim();
-        const validVersion = Version.fromString(version);
-        if (!validVersion) {
+
+        const minVersion = Version.fromString(version);
+        if (!minVersion) {
           this._isValid = false;
           break;
         }
+        const maxVersion = minVersion.copy();
 
-        const float = validVersion.toFloat();
+        if (!minVersion.isPreRelease) {
+          const singleVersionParts = version.split('.');
+          console.log(minVersion);
+          if (singleVersionParts.length === 1) {
+            maxVersion.minor = 999;
+            maxVersion.patch = 999;
+            minVersion.aOrB = 'a';
+          }else if (singleVersionParts.length === 2) {
+            maxVersion.patch = 999;
+            minVersion.aOrB = 'a';
+          } else if (singleVersionParts.length === 3) {
+            minVersion.aOrB = 'a'; 
+          }
+        }
+
         this._ranges.push({
-          max: float,
-          min: float,
-          maxVersion: validVersion,
-          minVersion: validVersion
+          max: maxVersion.toFloat(),
+          min: minVersion.toFloat(),
+          maxVersion,
+          minVersion
         });
         continue;
       } else if (versionParts.length !== 2) {
@@ -192,8 +208,6 @@ export default class SelectionChecker {
 
     if (!this._isValid)
       return;
-
-    // TODO simplify selection
   }
 
   /**

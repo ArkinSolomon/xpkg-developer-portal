@@ -86,19 +86,40 @@ export default class Version {
   /**
    * Get whether this is an alpha or beta or not a pre-release of this version.
    * 
-   * @returns {('a'|'b')?} 'a' if the version is an alpha pre-release, 'b' if the version is a beta pre-release, or undefined if it is not a pre-release.
+   * @returns {'a'|'b'|undefined} 'a' if the version is an alpha pre-release, 'b' if the version is a beta pre-release, or undefined if it is not a pre-release.
    */
   get aOrB(): 'a' | 'b' | undefined {
     return this._versionParts[3];
   }
 
   /**
+   * Set whether this is an alpha or beta pre-release. Sets the pre-release number to one if it is not set.
+   * 
+   * @param {'a'|'b'} [aOrB] Whether this is an alpha or beta pre-release.
+   */
+  set aOrB(aOrB: 'a' | 'b' | undefined) {
+    this._versionParts[3] = aOrB;
+    if (aOrB)
+      this._versionParts[4] ??= 1;
+  }
+
+  /**
    * Get the pre-release number.
    * 
-   * @returns {number?} The pre-release number if this version is a pre-release, otherwise undefined.
+   * @returns {number|undefined} The pre-release number if this version is a pre-release, otherwise undefined.
    */
   get preReleaseNum(): number | undefined {
     return this._versionParts[4];
+  }
+
+  /**
+   * Set the pre-release number if aOrB is set.
+   * 
+   * @param {number} [preReleaseNum] The pre-release number.
+   */
+  set preReleaseNum(preReleaseNum: number | undefined) {
+    if (this._versionParts[3])
+      this._versionParts[4] = preReleaseNum;
   }
 
   /**
@@ -237,6 +258,15 @@ export default class Version {
     if (this._versionParts[3])
       finalStr += this._versionParts.slice(3, 5).join('');
     return finalStr;
+  }
+
+  /**
+   * Create a copy of the version.
+   * 
+   * @returns {Version} A copy of this version.
+   */
+  copy(): Version {
+    return new Version(this.major, this.minor, this.patch, this.aOrB, this.preReleaseNum);
   }
 }
 
