@@ -126,7 +126,7 @@ export default class Tools extends Component {
                 let versionTesterOutput = DEFAULT_VERSION_OUTPUT;
                     
                 if (testVersionStr.length === 0)
-                  versionTesterErrors.testVersion = 'Version string required';
+                  versionTesterErrors.testVersion = 'No version string given';
                 else if (testVersionStr.length > 15)
                   versionTesterErrors.testVersion = 'Version string too long';
                 else if (!testVersion)
@@ -139,9 +139,11 @@ export default class Tools extends Component {
                 else if (!selectionChecker.isValid)
                   versionTesterErrors.testVersionSelection = 'Invalid version selection';
 
-                if (!Object.keys(versionTesterErrors).length) {
-                  const isWithinRange = selectionChecker.containsVersion(testVersion as Version);
-                  
+                if (!versionTesterErrors.testVersionSelection) {
+                  let isWithinRange = false;
+                  if (!versionTesterErrors.testVersion)
+                    isWithinRange = selectionChecker.containsVersion(testVersion as Version);
+
                   const ranges = selectionChecker.ranges;
                   let rangeStr = '';
                   for (const i in ranges) {
@@ -161,7 +163,11 @@ export default class Tools extends Component {
                       rangeStr += ', ';
                   }
 
-                  versionTesterOutput = `The version <b>${(testVersion as Version).toString()}</b> is ${isWithinRange ? '' : '<b>not</b> '} within the range. The range you have specified covers versions ${rangeStr.substring(0, ranges.length !== 2 ? rangeStr.length - 3 : rangeStr.length - 1)}.`;
+                  rangeStr = rangeStr.substring(0, ranges.length !== 2 ? rangeStr.length - 3 : rangeStr.length - 1);
+                  if (!versionTesterErrors.testVersion)
+                    versionTesterOutput = `The version <b>${(testVersion as Version).toString()}</b> is ${isWithinRange ? '' : '<b>not</b> '} within the range. The range you have specified covers versions ${rangeStr}.`;
+                  else
+                    versionTesterOutput = `The range you have specified covers ${rangeStr}.`;
                 }
                     
                 this.setState({

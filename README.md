@@ -1,46 +1,88 @@
-# Getting Started with Create React App
+# X-Pkg Package Registry
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The registry is responsible for keeping track of authors and packages, as well as uploading new packages and versions. 
 
-## Available Scripts
+## Routes
 
-In the project directory, you can run:
+### /packages
 
-### `npm start`
+_Method:_ **GET**
+_Authorization:_ **none**
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Get all of the packages and versions on the registry. 
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+**Responses**
 
-### `npm test`
+* Status: 200 OK
+* Content-Type: application/json
+* Sample response:
+```json
+{
+  "data": [
+    {
+      "authorId": "w56kzm5dgy2eyxny",
+      "authorName": "Arkin Solomon",
+      "description": "ooga booga",
+      "packageId": "arkin.test_package",
+      "packageName": "Arkin Test Package",
+      "packageType": "aircraft",
+      "versions": [
+        "1.0.0",
+        "1.0.1",
+        "1.0.2",
+        "1.0.3",
+        "1.0.4",
+        "1.0.5"
+      ]
+    }
+  ]
+}
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### /packages/:packageId/:version
 
-### `npm run build`
+_Method:_ **GET**
+_Authorization:_ **none**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Get information on a specific version of a specific package
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**Responses**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+* Status: 200 OK
+* Content-Type: application/json
+* Sample response:
+```json
+{
+  "dependencies": [
+    [
+      "arkin.dep2",
+      "*"
+    ],
+    [
+      "arkin.dep",
+      "*"
+    ]
+  ],
+  "hash": "9D5BE4AB4CD72FEF508B59CE0C530B0F293B63A894F7959F044A89F3E8400467",
+  "incompatibilities": [],
+  "loc": "https://xpkgregistrydev.s3.us-east-2.amazonaws.com/kGdUldPGyPjXMyzjPfqeBVnfwfAw1Z1s7LMgCiKqSRsdJpBuFOn7Ud0cQ3jq22aS",
+  "optionalDependencies": []
+}
+```
 
-### `npm run eject`
+### /packages/description
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+_Method:_ **PUT**
+_Authorization:_ **required**
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Overwrite the description.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Sample request (application/x-www-form-urlencoded):
+```text
+newDescription=new+description
+packageId=arkin.test_package
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+**Responses**
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+* Status: 200 No Content

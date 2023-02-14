@@ -93,14 +93,14 @@ export default class Version {
   }
 
   /**
-   * Set whether this is an alpha or beta pre-release. Sets the pre-release number to one if it is not set.
+   * Set whether this is an alpha or beta pre-release. Sets the pre-release number to one if it is zero or not set.
    * 
    * @param {'a'|'b'} [aOrB] Whether this is an alpha or beta pre-release.
    */
   set aOrB(aOrB: 'a' | 'b' | undefined) {
     this._versionParts[3] = aOrB;
     if (aOrB)
-      this._versionParts[4] ??= 1;
+      this._versionParts[4] ||= 1;
   }
 
   /**

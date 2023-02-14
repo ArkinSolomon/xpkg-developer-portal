@@ -51,13 +51,15 @@
 // into performing these operations using native numbers.
 
 /**
- * This set defines bounds for a range. If the values of min and max are equal, it represents a single version range.
+ * This is a specific range from one version to another. If the values of min and max are equal, it represents a single version range.
  * 
- * @typedef {Object} RangeSet 
- * @property {Big} min The minimum value of the set.
- * @property {Big} max The maximum value of the set.
+ * @typedef {Object} VersionRange 
+ * @property {Big} min The minimum value of the range.
+ * @property {Big} max The maximum value of the range.
+ * @property {Version} minVersion The minimum version of the range.
+ * @property {Version} maxVersion The maximum version of the range.
  */
-type RangeSet = {
+type VersionRange = {
   min: Big;
   max: Big;
   minVersion: Version;
@@ -73,10 +75,10 @@ import Version from './version';
 export default class SelectionChecker {
 
   private _isValid = true;
-  private _ranges: RangeSet[] = [];
+  private _ranges: VersionRange[] = [];
 
   /**
-   * Check if the provided verison selection string was valid.
+   * Check if the provided version selection string was valid.
    * 
    * @returns {boolean} True if the provided version selection string is valid.
    */
@@ -85,24 +87,24 @@ export default class SelectionChecker {
   }
 
   /**
-   * Get a copy of the the ranges (simplified).
+   * Get a copy of the ranges (simplified).
    * 
    * @returns {RangeSet[]} A copy of the simplified ranges.
    */
-  get ranges(): RangeSet[] {
+  get ranges(): VersionRange[] {
     return this._ranges.slice();
   }
 
   /**
    * Create a new selection checker from a string.
    * 
-   * @param {string} selectionStr The selection string, comma seperated.
+   * @param {string} selectionStr The selection string, comma separated.
    */
   constructor(selectionStr: string) {
     const selectionSections = selectionStr.split(',');
 
     for (let selection of selectionSections) {
-      const allRanges: RangeSet = {
+      const allRanges: VersionRange = {
         min: new Big('0.000002'),
         max: new Big('999999999'),
         minVersion: new Version(0, 0, 1, 'a', 1),
@@ -130,17 +132,15 @@ export default class SelectionChecker {
 
         if (!minVersion.isPreRelease) {
           const singleVersionParts = version.split('.');
-          console.log(minVersion);
-          if (singleVersionParts.length === 1) {
+
+          if (singleVersionParts.length === 1) 
             maxVersion.minor = 999;
+
+          if (singleVersionParts.length <= 2) 
             maxVersion.patch = 999;
-            minVersion.aOrB = 'a';
-          }else if (singleVersionParts.length === 2) {
-            maxVersion.patch = 999;
-            minVersion.aOrB = 'a';
-          } else if (singleVersionParts.length === 3) {
+
+          if (singleVersionParts.length <= 3) 
             minVersion.aOrB = 'a'; 
-          }
         }
 
         this._ranges.push({
@@ -208,6 +208,19 @@ export default class SelectionChecker {
 
     if (!this._isValid)
       return;
+    
+    this._ranges.sort(compareRanges);
+
+    let curr = 0;
+    while (this._ranges.length > 1 && curr < this._ranges.length - 1) {
+      const r = tryMerge(this._ranges[curr], this._ranges[curr + 1]);
+      if (!r)
+        ++curr;
+      else {
+        this._ranges[curr] = r;
+        this._ranges.splice(curr + 1, 1);
+      }
+    }
   }
 
   /**
@@ -225,4 +238,45 @@ export default class SelectionChecker {
     }
     return false;
   }
+}
+
+/**
+ * Try merging two version ranges. Note that r1 must be less than or equal to r2.
+ *
+ * @param {VersionRange} r1 The first range to try merging.
+ * @param {VersionRange} r2 The second range to try merging.
+ * @return {VersionRange?} Undefined if the two range sets can not be merged, only r1 if r2 fits inside r1, or a new merged range set.
+ */
+function tryMerge(r1: VersionRange, r2: VersionRange): VersionRange | void {
+  if (compareRanges(r1, r2) > 0)
+    throw new Error('Invalid ordering of ranges');
+  
+  if (r1.max.lt(r2.min))
+    return;
+  
+  if (r1.max.lt(r2.max)) {
+    const newRange: VersionRange = {
+      min: r1.min,
+      minVersion: r1.minVersion,
+      max: r2.max,
+      maxVersion: r2.maxVersion
+    };
+    return newRange;
+  }
+
+  return r1;
+}
+
+/**
+ * Compare two ranges.
+ * 
+ * @param {VersionRange} r1 The first range to compare.
+ * @param {VersionRange} r2 The second range to compare.
+ * @returns {number}  A zero if these two version ranges are equal, a negative number if r1 is considered less than r2, or a positive number otherwise.
+ */
+function compareRanges(r1: VersionRange, r2: VersionRange): number {
+  const minComp = r1.min.cmp(r2.min);
+  if (minComp === 0)
+    return r1.max.cmp(r2.max);
+  return minComp;
 }
