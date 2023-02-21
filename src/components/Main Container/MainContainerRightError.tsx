@@ -14,11 +14,15 @@
  */
 import '../../css/MainContainerRight.scss';
 
-function MainContainerRightError({ message }: { message: string; }) {
+function MainContainerRightError({ message, linkName, link }: { message: string; linkName?: string; link?: string; }) {
   return (
     <div className="error-screen">
-      <h3>There was an error</h3>
-      <p>{ message }</p>
+      <h2 className='text-[24pt] pt-7 mb-6'>There was an error</h2>
+      <p className='text-[15pt] mb-4'>{message}</p>
+      {
+        link && 
+          <button onClick={() => window.location.href = link}>{linkName || link}</button>
+      }
     </div>
   );
 }

@@ -30,6 +30,7 @@ import Edit from './pages/Edit';
 import Footer from './components/Footer';
 import Incompatibility from './pages/Incompatibility';
 import Tools from './pages/Tools';
+import Verify from './pages/Verify';
 
 function App() {
   return (
@@ -45,6 +46,10 @@ function App() {
         <Route path='/edit' element={<Edit />} />
         <Route path='/incompatibility' element={<Incompatibility />} />
         <Route path='/tools' element={<Tools />} />
+        
+        {/* We use /verify twice because /verify/ is not caught by /verify/:verificationToken */}
+        <Route path='/verify' element={<Verify />} />
+        <Route path='/verify/:verificationToken' element={<Verify />} />
         <Route path='*' element={<NotFound />} />
       </Routes>
       <Footer />
