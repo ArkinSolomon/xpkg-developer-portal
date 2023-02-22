@@ -69,31 +69,39 @@ class Verify extends Component {
         errorMessage: 'Invalid verification token.'
       } as Partial<VerifyState>);
     
+    let errorMessage;
+    let response;
+    try {
+      response = await httpRequest('http://localhost:5020/auth/verify/' + verificationToken, HTTPMethod.POST, void (0), {});
+      errorMessage = void 0;
+    } catch {
+      errorMessage = 'Could not connect to server. Please try again later.';
+    }
 
-    const response = await httpRequest('http://localhost:5020/auth/verify/' + verificationToken, HTTPMethod.POST, void (0), {});
     this.setState({
       doneLoading: true
     } as Partial<VerifyState>);
 
-    let errorMessage: string;
-    switch (response.status) {
-    case 204:
-      return;
-    case 401:
-      errorMessage = 'Token is invalid or expired.';
-      break;
-    case 403:
-      errorMessage = 'You have already been verified.';
-      break;
-    case 500:
-      errorMessage = 'Internal server error, please try again later.';
-      break;
-    default:
-      errorMessage = 'An unknown error occured.';
-      break;
+    if (response) {
+      switch (response.status) {
+      case 204:
+        return;
+      case 401:
+        errorMessage = 'Token is invalid or expired.';
+        break;
+      case 403:
+        errorMessage = 'You have already been verified.';
+        break;
+      case 500:
+        errorMessage = 'Internal server error, please try again later.';
+        break;
+      default:
+        errorMessage = 'An unknown error occured.';
+        break;
+      }
     }
 
-    this.setState({errorMessage} as Partial<VerifyState>);
+    this.setState({ errorMessage } as Partial<VerifyState>);
   }
 
   render(): ReactNode {
