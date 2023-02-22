@@ -27,13 +27,16 @@
     font-size: 12pt;
     color: $error-red;
   }
+}
 
-  input[type="submit"] {
+.account-page {
+  .reverify-button, input[type="submit"] {
     @include primary-button;
 
     display: inline-block;
     height: 30px;
-    width: 95px;
+    max-width: fit-content;
+    min-width: 95px;
     font-size: 13pt;
   }
 }

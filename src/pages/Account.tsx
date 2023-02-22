@@ -17,10 +17,14 @@
  * The data recieved from the server about the user/author.
  * 
  * @typedef {Object} AccountData
+ * @property {string} id The id of the user/author.
  * @property {string} name The display name of the user/author.
+ * @property {boolean} isVerified True if the user/author is verified.
  */
 type AccountData = {
+  id: string;
   name: string;
+  isVerified: boolean;
 };
 
 /**
@@ -28,23 +32,27 @@ type AccountData = {
  * 
  * @typedef {Object} AccountState
  * @property {ReactElement} rendered The element to render on the right side.
- * @property {AccountData} accountData The data received from the server concerning the user/author's account.
+ * @property {AccountData} [accountData] The data received from the server concerning the user/author's account.
  * @property {boolean} invalidNameChangeForm True if the form data for the name change form is invalid.
  * @property {ConfirmPopupConfig} [popupConfig] True if a popup is currently open.
- * @property {string} nameValue The value of the name field after pressing submit.
+ * @property {string} [nameValue] The value of the name field after pressing submit.
  * @property {string} isSubmitting True if a form is currently submitting something.
  * @property {string} [nameChangeError] Has a value if there was an error changing the name.
  * @property {boolean} isPopupOpen True if the popup is open.
+ * @property {boolean} verificationSent True if the verification email has been sent.
+ * @property {boolean} sendingVerification True if the verification email is being sent.
  */
 type AccountState = {
-  rendered: ReactElement;
-  accountData: AccountData;
+  rendered?: ReactElement;
+  accountData?: AccountData;
   invalidNameChangeForm: boolean;
   popupConfig?: ConfirmPopupConfig;
-  nameValue: string;
+  nameValue?: string;
   isSubmitting: boolean;
   nameChangeError?: string;
   isPopupOpen: boolean;
+  verificationSent: boolean;
+  sendingVerification: boolean;
 };
 
 /**
@@ -70,6 +78,7 @@ import { Formik, FormikErrors } from 'formik';
 import * as SB from '../components/SideBar';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import HTTPMethod from 'http-method-enum';
+import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
 const { default: SideBar } = SB;
 
 class Account extends Component {
@@ -82,10 +91,17 @@ class Account extends Component {
 
     this.state = {
       rendered: this.loading(),
-      accountData: {},
       invalidNameChangeForm: false,
-      isSubmitting: false
-    } as AccountState;
+      isSubmitting: false,
+      isPopupOpen: false,
+      accountData: {
+        name: '',
+        id: '',
+        isVerified: false
+      },
+      verificationSent: false,
+      sendingVerification: false
+    };
 
     const token = tokenStorage.checkAuth();
     if (!token) {
@@ -94,10 +110,10 @@ class Account extends Component {
       return;
     }   
 
-    this.updateRendered = this.updateRendered.bind(this);
-    this.loading = this.loading.bind(this);
-    this.error = this.error.bind(this);
-    this.validateNameChange = this.validateNameChange.bind(this);
+    // this.updateRendered = this.updateRendered.bind(this);
+    // this.loading = this.loading.bind(this);
+    // this.error = this.error.bind(this);
+    // this.validateNameChange = this.validateNameChange.bind(this);
   }
 
   componentDidMount(): void {
@@ -136,10 +152,7 @@ class Account extends Component {
 
   loading(): ReactElement {
     return (
-      <div className="error-screen">
-        <h3>Loading Account</h3>
-        <img src="/loading.gif" alt="Loading GIF" />
-      </div>
+      <MainContainerRightLoading loadingMessage='Loading account details' />
     );
   }
 
@@ -154,7 +167,7 @@ class Account extends Component {
   }
 
   validateNameChange({ name }: NameChangeValues): FormikErrors<NameChangeValues> {
-    const isValid = name.trim().toLowerCase() !== this.state.accountData.name.toLowerCase() &&
+    const isValid = name.trim().toLowerCase() !== this.state.accountData?.name.toLowerCase() &&
       util.validateName(name.trim());
   
     this.setState({
@@ -172,114 +185,177 @@ class Account extends Component {
       this.setState({ accountData });
     else 
       accountData = this.state.accountData;
+    
+    let verificationButtonText = 'Resend verification email';
+    if (this.state.sendingVerification)
+      verificationButtonText = 'Please wait...';
+    else if (this.state.verificationSent)
+      verificationButtonText = 'Verification sent';
 
     return (
-      <Formik
-        validate={this.validateNameChange}
-        validateOnChange={true}
-        validateOnMount={true}
-        initialValues={{
-          name: ''
-        } as NameChangeValues}
-        onSubmit={
-          (values, { setSubmitting }) => {
-            this.setState({
-              isPopupOpen: true,
-              popupConfig: {
-                title: 'Confirm name change',
-                confirmText: 'Confirm',
-                closeText: 'Cancel',
-                onClose:  () => this.setState({
-                  isPopupOpen: false
-                } as Partial<AccountState>),
-                onConfirm:   () => {
-                  if (this.state.isSubmitting)
-                    return;
-                  this.setState({
-                    isSubmitting: true
+      <MainContainerRight title="Basic Information">
+        <div className='account-page'>
+          <Formik
+            validate={this.validateNameChange}
+            validateOnChange={true}
+            validateOnMount={true}
+            initialValues={{
+              name: ''
+            } as NameChangeValues}
+            onSubmit={
+              (values, { setSubmitting }) => {
+                this.setState({
+                  isPopupOpen: true,
+                  popupConfig: {
+                    title: 'Confirm name change',
+                    confirmText: 'Confirm',
+                    closeText: 'Cancel',
+                    onClose:  () => this.setState({
+                      isPopupOpen: false
+                    } as Partial<AccountState>),
+                    onConfirm:   () => {
+                      if (this.state.isSubmitting)
+                        return;
+                      this.setState({
+                        isSubmitting: true
       
-                    // Force a rerender of the basic information page to gray out the change button
-                  } as AccountState, () => this.updateRendered(this.basicInformation()));
+                        // Force a rerender of the basic information page to gray out the change button
+                      } as AccountState, () => this.updateRendered(this.basicInformation()));
       
-                  httpRequest('http://localhost:5020/account/changeName', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
-                    newName: this.state.nameValue,
-                  }, (err, res) => {
-                    if (err)
-                      return console.error(err);
+                      httpRequest('http://localhost:5020/account/changeName', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
+                        newName: this.state.nameValue as string,
+                      }, (err, res) => {
+                        if (err)
+                          return console.error(err);
                       
-                    let nameChangeError: string | undefined = void (0);
-                    let popupConfig: ConfirmPopupConfig | undefined = void (0);
-                    if (res?.status !== 204) {
-                      switch (res?.status) {
-                      case 400:
-                        nameChangeError = 'Invalid username';
-                        break;
-                      case 406:
-                        nameChangeError = 'You changed your username within the last 30 days';
-                        break;
-                      }
-                    } else {
+                        let nameChangeError: string | undefined = void (0);
+                        let popupConfig: ConfirmPopupConfig | undefined = void (0);
+                        if (res?.status !== 204) {
+                          switch (res?.status) {
+                          case 400:
+                            nameChangeError = 'Invalid username';
+                            break;
+                          case 406:
+                            nameChangeError = 'You changed your username within the last 30 days';
+                            break;
+                          }
+                        } else {
 
-                      popupConfig = {
-                        title: 'Name changed successfully',
-                        showClose: false,
-                        confirmText: 'Ok',
-                        onConfirm: () => {
-                          window.location.href = '/';
-                        },
-                        children: <p className='generic-popup-text'>Your name has been changed successfully. You will be logged out in 5 seconds, or when you press ok.</p>
-                      } as ConfirmPopupConfig;
+                          popupConfig = {
+                            title: 'Name changed successfully',
+                            showClose: false,
+                            confirmText: 'Ok',
+                            onConfirm: () => {
+                              window.location.href = '/';
+                            },
+                            children: <p className='generic-popup-text'>Your name has been changed successfully. You will be logged out in 5 seconds, or when you press ok.</p>
+                          } as ConfirmPopupConfig;
                       
-                      tokenStorage.delToken();
-                      setTimeout(() => window.location.href = '/', 5000);
-                    }
+                          tokenStorage.delToken();
+                          setTimeout(() => window.location.href = '/', 5000);
+                        }
+                        this.setState({
+                          nameChangeError,
+                          popupConfig,
+                          isPopupOpen: popupConfig !== void(0), 
+                          isSubmitting: false,
+                        } as AccountState, () => this.updateRendered(this.basicInformation()));
+                      });
+                    },
+                    children: <p className='generic-popup-text'>Are you sure you want to change your name from <b>{ this.state.accountData?.name }</b> to <b>{this.state.nameValue}</b>. Your name can not be changed again for 30 days.</p>
+                  },
+                  nameValue: values.name,
+                  isSubmitting: false
+                } as Partial<AccountState>, () => {
+                  setSubmitting(false);
+                }); 
+              }
+            }>
+            {({
+              handleChange,
+              handleSubmit,
+              isSubmitting
+            }) => {
+              const nameChangeFieldData = {
+                name: 'name',
+                title: 'Name',
+                placeholder: this.state.accountData?.name,
+                width: '60%',
+                defaultValue: this.state.accountData?.name,
+                onChange: handleChange
+              };
+
+              return (
+                <div className='inline-block float-left w-1/2'>
+                  <form className="account-form" onSubmit={handleSubmit}>
+                    <InputField {...nameChangeFieldData} />
+                    <input
+                      type="submit"
+                      value="Change"
+                      disabled={isSubmitting || this.state.isSubmitting || !this.state.invalidNameChangeForm}
+                    />
+                    {this.state.nameChangeError && <p className='error-text'>{this.state.nameChangeError}</p>}
+                  </form>
+          
+                </div>
+              );
+            }} 
+          </Formik>
+          <div className='inline-block float-right w-1/2'>
+            <p>Verification status: {this.state.accountData?.isVerified ? 'YES' : 'NO'}</p>
+            <button disabled={this.state.accountData?.isVerified || this.state.verificationSent || this.state.sendingVerification} className='reverify-button mt-3' onClick={async () => {
+              this.setState({
+                sendingVerification: true
+              } as Partial<AccountState>, () => this.updateRendered(this.basicInformation()));
+              
+              const response = await httpRequest('http://localhost:5020/account/reverify', HTTPMethod.POST, tokenStorage.checkAuth() as string, {});
+
+              let errorMessage: string;
+              switch (response.status) {
+              case 204:
+                this.setState({
+                  isPopupOpen: true,
+                  verificationSent: true,
+                  sendingVerification: false,
+                  popupConfig: {
+                    title: 'Verification Email Sent',
+                    children: <p className='generic-popup-text'>The verification email has been sent to the email associated with this account. The link will be valid for 24 hours.</p>,
+                    showClose: true,
+                    onClose: () =>
+                      this.setState({
+                        isPopupOpen: false
+                      } as Partial<AccountState>),
+                  }
+                } as Partial<AccountState>, () => this.updateRendered(this.basicInformation()));
+                return;
+              case 400:
+                errorMessage = 'Could not resend the verification email, you have already verified your account.';
+                break;
+              case 500:
+                errorMessage = 'Could not resend the verification email, an internal server error occured. Please try again later.';
+                break;
+              default:
+                errorMessage = 'An unknown error occured trying to resend the verification email. Please try again later.';
+                break;
+              }
+              
+              this.setState({
+                isPopupOpen: true,
+                sendingVerification: false,
+                popupConfig: {
+                  title: 'Error Resending Verification Email',
+                  children: <p className='generic-popup-text'>{ errorMessage }</p>,
+                  showClose: true,
+                  onClose: () =>
                     this.setState({
-                      nameChangeError,
-                      popupConfig,
-                      isPopupOpen: popupConfig !== void(0), 
-                      isSubmitting: false,
-                    } as AccountState, () => this.updateRendered(this.basicInformation()));
-                  });
-                },
-                children: <p className='generic-popup-text'>Are you sure you want to change your name from <b>{ this.state.accountData.name }</b> to <b>{this.state.nameValue}</b>. Your name can not be changed again for 30 days.</p>
-              },
-              nameValue: values.name,
-              isSubmitting: false
-            } as Partial<AccountState>, () => {
-              setSubmitting(false);
-            }); 
-          }
-        }>
-        {({
-          handleChange,
-          handleSubmit,
-          isSubmitting
-        }) => {
-          const nameChangeFieldData = {
-            name: 'name',
-            title: 'Name',
-            placeholder: this.state.accountData.name,
-            width: '30%',
-            defaultValue: this.state.accountData.name,
-            onChange: handleChange
-          };
-
-          return (
-            <MainContainerRight title="Basic Information">
-              <form className="account-form" onSubmit={handleSubmit}>
-                <InputField {...nameChangeFieldData} />
-                <input
-                  type="submit"
-                  value="Change"
-                  disabled={isSubmitting || this.state.isSubmitting || !this.state.invalidNameChangeForm}
-                />
-                {this.state.nameChangeError && <p className='error-text'>{this.state.nameChangeError}</p>}
-              </form>
-            </MainContainerRight>
-          );
-        }
-        } 
-      </Formik>
+                      isPopupOpen: false
+                    } as Partial<AccountState>),
+                }
+              } as Partial<AccountState>);
+            }}>{verificationButtonText}</button>
+          </div>
+        </div>
+      </MainContainerRight>
     );
   }
 
@@ -296,7 +372,6 @@ class Account extends Component {
     return (
       <>
         <ConfirmPopup {...this.state.popupConfig as ConfirmPopupConfig} open={this.state.isPopupOpen} />
-
         <MainContainer
           left={
             (
