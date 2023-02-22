@@ -113,7 +113,7 @@ class Account extends Component {
     // this.updateRendered = this.updateRendered.bind(this);
     // this.loading = this.loading.bind(this);
     // this.error = this.error.bind(this);
-    // this.validateNameChange = this.validateNameChange.bind(this);
+    this.validateNameChange = this.validateNameChange.bind(this);
   }
 
   componentDidMount(): void {
@@ -167,7 +167,7 @@ class Account extends Component {
   }
 
   validateNameChange({ name }: NameChangeValues): FormikErrors<NameChangeValues> {
-    const isValid = name.trim().toLowerCase() !== this.state.accountData?.name.toLowerCase() &&
+    const isValid = name.trim() !== this.state.accountData?.name &&
       util.validateName(name.trim());
   
     this.setState({
