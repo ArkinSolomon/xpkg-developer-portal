@@ -296,7 +296,6 @@ class Account extends Component {
                     />
                     {this.state.nameChangeError && <p className='error-text'>{this.state.nameChangeError}</p>}
                   </form>
-          
                 </div>
               );
             }} 

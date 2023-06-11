@@ -26,7 +26,7 @@ enum PackagePage {
 }
 
 /**
- * Enumeration of all possible package types.
+ * Enumeration of all possible package types. Same as in /src/packages/packageDatabase.ts on the registry.
  * 
  * @name PackageType
  * @enum {string}
@@ -38,6 +38,24 @@ export enum PackageType {
   Plugin = 'plugin',
   Livery = 'livery',
   Other = 'other'
+}
+
+/**
+ * Enumeration of all statuses for package versions. Same as in /src/packages/packageDatabase.ts on the registry.
+ * 
+ * @name VersionStatus
+ * @enum {string}
+ */
+export enum VersionStatus {
+  Processing = 'processing', 
+  Processed = 'processed',
+  Downloaded = 'downloaded', // Package file has been downloaded and is no longer available
+  Removed = 'removed', // The version has been removed 
+  FailedMACOSX = 'failed_macosx', // The version failed due to having only a __MACOSX file
+  FailedNoFileDir = 'failed_no_file_dir', // No directory with the package id present
+  FailedManifestExists = 'failed_manifest_exists', // Can not have a manifest.json file
+  FailedInvalidFileTypes = 'failed_invalid_file_types', // Can not have symbolic links or executables
+  FailedServer = 'failed_server' // Server error
 }
 
 /**
@@ -85,6 +103,7 @@ export type VersionData = {
   privateKey: string;
   installs: string;
   uploadDate: Date;
+  status: VersionStatus;
 };
 
 /**
@@ -277,6 +296,7 @@ class Packages extends Component {
                           e.preventDefault();
                           $(e.target).parent().text(version.privateKey);
                         }}>Click to reveal</a> : '---'}</td>
+                        <td>{getStatusTextShort(version.status)}</td>
                         <td>{version.isStored ? <a className='subtable-link' onClick={e => {
                           e.preventDefault();
                           downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
@@ -302,6 +322,7 @@ class Packages extends Component {
                               <th>Installs</th>
                               <th>Public</th>
                               <th>Private Key</th>
+                              <th>Status</th>
                               <th>Download</th>
                             </tr>
                           </thead>
@@ -349,6 +370,29 @@ class Packages extends Component {
         }
       />
     );
+  }
+}
+
+/**
+ * Get a short version of the status, that doesn't specify the failure reason.
+ * 
+ * @param {VersionStatus} status The status to get the text of.
+ * @return {string} The human-readable status.
+ */
+function getStatusTextShort(status: VersionStatus) {
+  switch (status) {
+  case VersionStatus.Processing: return 'Processing';
+  case VersionStatus.Processed: return 'Processed';
+  case VersionStatus.Downloaded: return 'Downloaded';
+  case VersionStatus.Removed: return 'Removed';
+  case VersionStatus.FailedInvalidFileTypes:
+  case VersionStatus.FailedMACOSX:
+  case VersionStatus.FailedManifestExists:
+  case VersionStatus.FailedNoFileDir:
+  case VersionStatus.FailedServer:
+    return 'Failed';
+  default:
+    return 'Unknown';
   }
 }
 

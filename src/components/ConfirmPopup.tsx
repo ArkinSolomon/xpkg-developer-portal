@@ -46,7 +46,7 @@ export type ConfirmPopupConfig = {
 
 import { ReactElement, ReactNode } from 'react';
 import Popup from 'reactjs-popup';
-import '../css/ConfirmPopup.scss';
+import '../css/Popup.scss';
 
 function ConfirmPopup(props: ConfirmPopupConfig & { open: boolean; }) {
 
@@ -85,7 +85,7 @@ function ConfirmPopup(props: ConfirmPopupConfig & { open: boolean; }) {
       };
       
       return (
-        <div className='confirm-popup'>
+        <div className='popup-dialog'>
           <h2>{props.title}</h2>
           <div className='popup-children'>
             {props.children}
