@@ -41,7 +41,7 @@ export enum PackageType {
 }
 
 /**
- * Enumeration of all statuses for package versions. Same as in /src/packages/packageDatabase.ts on the registry.
+ * Enumeration of all statuses for package versions. Same as in /src/packages/packageDatabase.ts on the registry. See registry source code for more information.
  * 
  * @name VersionStatus
  * @enum {string}
@@ -49,13 +49,14 @@ export enum PackageType {
 export enum VersionStatus {
   Processing = 'processing', 
   Processed = 'processed',
-  Downloaded = 'downloaded', // Package file has been downloaded and is no longer available
-  Removed = 'removed', // The version has been removed 
-  FailedMACOSX = 'failed_macosx', // The version failed due to having only a __MACOSX file
-  FailedNoFileDir = 'failed_no_file_dir', // No directory with the package id present
-  FailedManifestExists = 'failed_manifest_exists', // Can not have a manifest.json file
-  FailedInvalidFileTypes = 'failed_invalid_file_types', // Can not have symbolic links or executables
-  FailedServer = 'failed_server' // Server error
+  Downloaded = 'downloaded',
+  Removed = 'removed', 
+  FailedMACOSX = 'failed_macosx',
+  FailedNoFileDir = 'failed_no_file_dir', 
+  FailedManifestExists = 'failed_manifest_exists', 
+  FailedInvalidFileTypes = 'failed_invalid_file_types',
+  FailedServer = 'failed_server',
+  Aborted = 'aborted'
 }
 
 /**
