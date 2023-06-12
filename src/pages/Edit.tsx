@@ -30,8 +30,9 @@
  * @property {boolean} showNewVersionForm True if we should show the new version form.
  * @property {File} [newVersionFile] The file uploaded for the new version.
  * @property {JSX.Element} dependencyList The dependency list rendered. 
- * @property {JSX.Element} optionalDependencyList The optional dependency list rendered.
  * @property {JSX.Element} incompatibilityList The incompatibility list rendered.
+ * @property {boolean} uploading True if we are currently uploading a package version to the server.
+ * @property {number} uploadProgress Our current upload progress.
  */
 type EditState = {
   isLoading: boolean;
@@ -47,8 +48,9 @@ type EditState = {
   showNewVersionForm: boolean;
   newVersionFile?: File;
   dependencyList: JSX.Element;
-  optionalDependencyList: JSX.Element;
   incompatibilityList: JSX.Element;
+  uploading: boolean;
+  uploadProgress: number;
 };
 
 /**
@@ -86,7 +88,7 @@ import MainContainerRightError from '../components/Main Container/MainContainerR
 import MainContainerRight from '../components/Main Container/MainContainerRight';
 import * as tokenStorage from '../scripts/tokenStorage';
 import { downloadFile, httpRequest } from '../scripts/http';
-import { PackageData, VersionData } from './Packages';
+import { PackageData, VersionData, getStatusTextShort } from './Packages';
 import { Formik, FormikErrors } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
@@ -113,7 +115,6 @@ class Edit extends Component {
   private _isMounted = false;
   private _originalDesc: string;
   private _dependencies: [string, string][];
-  private _optionalDependencies: [string, string][];
   private _incompatibilities: [string, string][];
 
   constructor(props: Record<string, never>) {
@@ -121,7 +122,6 @@ class Edit extends Component {
 
     this._originalDesc = '';
     this._dependencies = [];
-    this._optionalDependencies = [];
     this._incompatibilities = [];
 
     const lists = this._genLists();
@@ -139,7 +139,9 @@ class Edit extends Component {
         isPrivate: false,
         isStored: true
       },
-      ...lists
+      ...lists,
+      uploading: false,
+      uploadProgress: 0
     };
 
     const token = tokenStorage.checkAuth();
@@ -153,7 +155,7 @@ class Edit extends Component {
     this.validateNewVersion = this.validateNewVersion.bind(this);
   }
 
-  private _genLists(): Pick<EditState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> {
+  private _genLists(): Pick<EditState, 'dependencyList' | 'incompatibilityList'> {
 
     const dependencyListProps: PackageListProps = {
       initialValues:  this._dependencies,
@@ -161,14 +163,6 @@ class Edit extends Component {
         this._dependencies[i] = [packageId, versionSelection];
       }
     };
-
-    const optionalDependencyList: PackageListProps = {
-      initialValues:  this._optionalDependencies,
-      onChange: (i, packageId, versionSelection) => {
-        this._optionalDependencies[i] = [packageId, versionSelection];
-      }
-    };
-
     const incompatibilityListProps: PackageListProps = {
       initialValues:  this._incompatibilities,
       onChange: (i, packageId, versionSelection) => {
@@ -177,9 +171,8 @@ class Edit extends Component {
     };
 
     // Make sure to generate a random key each render, otherwise it'll be consistent and won't re-render
-    const newValues: Pick<EditState, 'dependencyList' | 'optionalDependencyList' | 'incompatibilityList'> = {
+    const newValues: Pick<EditState, 'dependencyList' | 'incompatibilityList'> = {
       dependencyList: <PackageList {...dependencyListProps} key={nanoid(5)} />,
-      optionalDependencyList: <PackageList {...optionalDependencyList} key={nanoid(5)} />,
       incompatibilityList: <PackageList {...incompatibilityListProps} key={nanoid(5)} />
     };
     if (this._isMounted) 
@@ -324,9 +317,10 @@ class Edit extends Component {
         columns: {
           Version: 25,
           Installs: 15,
-          Public: 15,
-          Stored: 15,
-          'Uploaded Date': 30
+          Public: 7,
+          Stored: 7,
+          Status: 20,
+          'Uploaded Date': 26
         },
         data: [],
         subrowData: [],
@@ -366,6 +360,7 @@ class Edit extends Component {
             version.installs,
             version.isPublic ? 'Yes' : 'No',
             version.isStored ? 'Yes' : 'No',
+            getStatusTextShort(version.status),
             new Date(version.uploadDate).toLocaleString()
           ]);
 
@@ -573,7 +568,6 @@ class Edit extends Component {
                       formData.append('isPrivate', isPrivate ? 'true' : 'false');
                       formData.append('isStored', isStored ? 'true' : 'false');
                       formData.append('dependencies', JSON.stringify(this._dependencies));
-                      formData.append('optionalDependencies', JSON.stringify(this._optionalDependencies));
                       formData.append('incompatibilities', JSON.stringify(this._incompatibilities));
 
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -741,7 +735,7 @@ class Edit extends Component {
                               {/* We don't need the right half */}
                             </div>
                             <div className='upload-input-section flex-section mt-9'>
-                              <div className='left-third right-border'>
+                              <div className='left-half right-border'>
                                 <p>Dependencies</p>
                                 <div className='package-list'>
                                   {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
@@ -767,33 +761,7 @@ class Edit extends Component {
                                   >Remove</button>
                                 </div>
                               </div>
-                              <div className='middle-third right-border'>
-                                <p>Optional Dependencies</p>
-                                <div className='package-list'>
-                                  {this._optionalDependencies.length === 0 && <p className='package-list-empty'>No optional dependencies</p>}
-                                  {this.state.optionalDependencyList}
-                                </div>
-                                <div className='package-list-buttons'>
-                                  <button
-                                    type='button'
-                                    className='list-mod-button left'
-                                    onClick={() => {
-                                      this._optionalDependencies.push(['', '']);
-                                      this._genLists();
-                                    }}
-                                  >Add</button>
-                                  <button
-                                    type='button'
-                                    className='list-mod-button right'
-                                    onClick={() => {
-                                      this._optionalDependencies.pop();
-                                      this._genLists();
-                                    }}
-                                    disabled={!this._optionalDependencies.length}
-                                  >Remove</button>
-                                </div>
-                              </div>
-                              <div className='right-third other-borders'>
+                              <div className='right-half other-borders'>
                                 <p>Incompatibilities</p>
                                 <div className='package-list'>
                                   {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}

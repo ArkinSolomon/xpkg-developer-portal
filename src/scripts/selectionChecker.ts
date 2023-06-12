@@ -30,18 +30,24 @@
 // 
 // The specific value subtracted is dependent on whether it's an alpha or beta
 // pre-release. If it's an alpha pre-release the pre-release number is 
-// subtracted from 999, and it's smushed at the end of another 999 and placed
+// subtracted from 999, and it's smushed at the end of 999999 and placed
 // after the decimal point. For instance:
 // 
-// 5.2.4a5 becomes 005002004 - .999994 which evaluates to 5002003.000006
+// 5.2.4a5 becomes 005002004 - .999999994 which evaluates to 5002003.000000006
 // 
 // It's similar for the beta version, where instead of smushing a 999 before,
 // it's smushed after. So the process would be to subtract 999 from the 
-// pre-release version, and then add a decimal point before, and a 999 after.
+// pre-release version, and then add a decimal point before and a 999, and a
+// 999 after. For instance:
+//
+// 9.5.2b12 becomes 009005002 - .999987999 which evaluates to 9005001.000012001
+//
+// For release candidates, 999 should be subtracted from the pre-release 
+// version. A decimal should be placed before and 999999 should be placed after.
 // For instance:
 //
-// 9.5.2b12 becomes 009005002 - .987999 which evaluates to 9005001.012001
-// 
+// 8.12.4r3 becomes 008012004 - .996999999 which evaluates to 8012003.003000001
+//
 // These same operations could be performed using integers alone, and in the
 // future it should be considered (as there may be some performance gains).
 // However, at the time of development it's 6 am, it works and is good enough.
@@ -140,7 +146,7 @@ export default class SelectionChecker {
             maxVersion.patch = 999;
 
           if (singleVersionParts.length <= 3) 
-            minVersion.aOrB = 'a'; 
+            minVersion.preReleaseType = 'a'; 
         }
 
         this._ranges.push({
@@ -185,7 +191,7 @@ export default class SelectionChecker {
 
         // Similarly, since (for instance) 2 really means everything up to 2.999.999, we can use this hack
         const partLen = upperVersionStr.split('.').length;
-        const hasPre = upperVersionStr.includes('a') || upperVersionStr.includes('b');
+        const hasPre = upperVersionStr.includes('a') || upperVersionStr.includes('b') || upperVersionStr.includes('r');
 
         if (!hasPre) {
           if (partLen < 2)

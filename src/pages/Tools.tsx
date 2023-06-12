@@ -251,5 +251,4 @@ export default class Tools extends Component {
       />
     );
   }
-  
 }

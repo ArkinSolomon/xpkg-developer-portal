@@ -18,9 +18,9 @@ import Big from 'big.js';
 /**
  * A version decomposed into sub-items. The way a version is stored internally.
  * 
- * @typedef {[number, number, number, ('a'|'b')?, number?]} Version
+ * @typedef {[number, number, number, ('a'|'b'|'r')?, number?]} Version
  */
-type InternalVersion = [number, number, number, ('a' | 'b')?, number?];
+type InternalVersion = [number, number, number, ('a' | 'b' | 'r')?, number?];
 
 /**
  * This class represents a single version.
@@ -86,20 +86,20 @@ export default class Version {
   /**
    * Get whether this is an alpha or beta or not a pre-release of this version.
    * 
-   * @returns {'a'|'b'|undefined} 'a' if the version is an alpha pre-release, 'b' if the version is a beta pre-release, or undefined if it is not a pre-release.
+   * @returns {'a'|'b'|'r'|undefined} 'a' if the version is an alpha pre-release, 'b' if the version is a beta pre-release, or undefined if it is not a pre-release.
    */
-  get aOrB(): 'a' | 'b' | undefined {
+  get preReleaseType(): 'a' | 'b' | 'r' | undefined {
     return this._versionParts[3];
   }
 
   /**
    * Set whether this is an alpha or beta pre-release. Sets the pre-release number to one if it is zero or not set.
    * 
-   * @param {'a'|'b'} [aOrB] Whether this is an alpha or beta pre-release.
+   * @param {'a'|'b'|'r'} [preReleaseType] Whether this is an alpha or beta pre-release.
    */
-  set aOrB(aOrB: 'a' | 'b' | undefined) {
-    this._versionParts[3] = aOrB;
-    if (aOrB)
+  set preReleaseType(preReleaseType: 'a' | 'b' | 'r' | undefined) {
+    this._versionParts[3] = preReleaseType;
+    if (preReleaseType)
       this._versionParts[4] ||= 1;
   }
 
@@ -137,22 +137,39 @@ export default class Version {
    * @param {number} major The major version number.
    * @param {number} [minor=0] The minor verison number.
    * @param {number} [patch=0] The patch version number.
-   * @param {('a'|'b')?} [aOrB] Whether this is an alpha or beta pre-release. Omit if it's a full release version.
+   * @param {'a'|'b'|'r'} [preReleaseType] The type of pre-release, alpha, beta, or release candidate. Omit if it's a full release version.
    * @param {number?} [preRelease] The pre-release number. Only include if aOrB is not undefined.
    * @throws {Error} Thrown if the version is invalid.
    */
-  constructor(major: number, minor = 0, patch = 0, aOrB?: ('a' | 'b'), preRelease?: number) {
-    if (typeof preRelease !== 'undefined' && !aOrB)
-      throw new Error('Pre-release number provided without specifying alpha or beta');
-    else if (typeof preRelease === 'undefined' && aOrB)
-      throw new Error('Pre-release number not provided but version specified as ' + aOrB === 'a' ? 'alpha' : 'beta');
+  constructor(major: number, minor = 0, patch = 0, preReleaseType?: ('a' | 'b'| 'r'), preRelease?: number) {
+    if (typeof preRelease !== 'undefined' && !preReleaseType)
+      throw new Error('Pre-release number provided without specifying alpha, beta, or pre-release');
+    else if (typeof preRelease === 'undefined' && preReleaseType) {
+
+      let preReleaseHumanReadableType;
+      switch (preReleaseType) {
+      case 'a':
+        preReleaseHumanReadableType = 'alpha';
+        break;
+      case 'b':
+        preReleaseHumanReadableType = 'beta';
+        break;
+      case 'r':
+        preReleaseHumanReadableType = 'release candidate';
+        break;
+      default:
+        throw new Error('Invalid pre-release type: ' + preReleaseType);
+      }
+
+      throw new Error('Pre-release number not provided but version specified as ' + preReleaseHumanReadableType);
+    }
     else if (preRelease === 0)
       throw new Error('Pre-release number can not be zero');
 
     if ((major | minor | patch) === 0)
       throw new Error('Major, minor, and patch are all zero');
 
-    this._versionParts = [major, minor ?? 0, patch ?? 0, aOrB, preRelease];
+    this._versionParts = [major, minor ?? 0, patch ?? 0, preReleaseType, preRelease];
   }
 
   /**
@@ -171,26 +188,26 @@ export default class Version {
     const testNumStr = (s: string) => /^\d{1,3}$/.test(s);
 
     let semanticPart = versionStr;
-    if (versionStr.includes('a') || versionStr.includes('b')) {
-      const matches = versionStr.match(/([ab])/);
-      const aOrB = matches?.[1] as 'a' | 'b';
+    if (versionStr.includes('a') || versionStr.includes('b') || versionStr.includes('r')) {
+      const matches = versionStr.match(/([abr])/);
+      const preReleaseType = matches?.[1] as 'a' | 'b' | 'r';
 
-      versionDecomp[3] = aOrB;
-      const parts = versionStr.split(new RegExp(aOrB));
+      versionDecomp[3] = preReleaseType;
+      const parts = versionStr.split(new RegExp(preReleaseType));
 
       semanticPart = parts[0];
-      const aOrBNumPart = parts[1];
+      const preReleasePart = parts[1];
 
       if (semanticPart.endsWith('.'))
         return;
 
-      if (!testNumStr(aOrBNumPart))
+      if (!testNumStr(preReleasePart))
         return;
 
-      const aOrBNum = parseInt(aOrBNumPart, 10);
-      if (aOrBNum <= 0)
+      const preReleaseNum = parseInt(preReleasePart, 10);
+      if (preReleaseNum <= 0)
         return;
-      versionDecomp[4] = aOrBNum;
+      versionDecomp[4] = preReleaseNum;
     }
 
     let major, minor, patch;
@@ -233,16 +250,24 @@ export default class Version {
     const floatStr = `${this._versionParts[0]}${toThreeDigits(this._versionParts[1])}${toThreeDigits(this._versionParts[2])}`;
 
     const semverFloat = new Big(floatStr);
-    const aOrB = this._versionParts[3];
-    if (!aOrB)
+    const preReleaseType = this._versionParts[3];
+    if (!preReleaseType)
       return semverFloat;
 
     const preReleaseNum = 999 - (this._versionParts[4] as number);
     let preReleaseFloatStr: string;
-    if (aOrB === 'a')
-      preReleaseFloatStr = `.999${toThreeDigits(preReleaseNum)}`;
-    else
-      preReleaseFloatStr = `.${toThreeDigits(preReleaseNum)}999`;
+    switch (preReleaseType) {
+    case 'a':
+      preReleaseFloatStr = `.999999${toThreeDigits(preReleaseNum)}`;
+      break;
+    case 'b':
+      preReleaseFloatStr = `.999${toThreeDigits(preReleaseNum)}999`;
+      break;
+    case 'r':
+      preReleaseFloatStr = `.${toThreeDigits(preReleaseNum)}999999`;
+      break;
+    }
+
     const preReleaseFloat = new Big(preReleaseFloatStr);
 
     return semverFloat.sub(preReleaseFloat);
@@ -266,7 +291,7 @@ export default class Version {
    * @returns {Version} A copy of this version.
    */
   copy(): Version {
-    return new Version(this.major, this.minor, this.patch, this.aOrB, this.preReleaseNum);
+    return new Version(this.major, this.minor, this.patch, this.preReleaseType, this.preReleaseNum);
   }
 }
 

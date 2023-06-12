@@ -154,17 +154,18 @@ class Packages extends Component {
   constructor(props: Record<string, never>) {
     super(props);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let successMessage;
-    if (urlParams.has('s')) {
-      successMessage = atob(urlParams.get('s') as string);
-    }
+    const successMessage = sessionStorage.getItem('success_message') ?? void 0;
+    const errorMessage = sessionStorage.getItem('error_message') ?? void 0;
+
+    sessionStorage.removeItem('success_message');
+    sessionStorage.removeItem('error_message');
 
     this.state = {
       page: PackagePage.PACKAGES,
       isLoading: true,
       data: {},
-      successMessage
+      successMessage,
+      errorMessage
     };
 
     const token = tokenStorage.checkAuth();
@@ -174,6 +175,121 @@ class Packages extends Component {
       return;
     }   
   } 
+  
+  packagesPage(): JSX.Element {
+    const columns = {
+      Package: 25,
+      Identifier: 25,
+      'Latest Version': 20,
+      Versions: 15,
+      Description: 15
+    };
+
+    const data = [] as string[][];
+    const subrowData = [] as PackageData[];
+    
+    for (const pkg of this.state.data.packages as PackageData[]) {
+      if (!pkg.versions.length)
+        data.push([
+          pkg.packageName,
+          pkg.packageId, '---',
+          pkg.versions.length.toString(),
+          pkg.description.slice(0, 9) + '...'
+        ]);
+      else 
+        data.push([
+          pkg.packageName,
+          pkg.packageId,
+          pkg.versions[0].version,
+          pkg.versions.length.toString(),
+          pkg.description.slice(0, 9) + '...'
+        ]);
+      subrowData.push(pkg);
+    }
+
+    const tableParams = {
+      columns,
+      data,
+      subrowData,
+      emptyMessage: 'No packages',
+      subrowRender: (pkg: PackageData): ReactElement => {
+
+        const versions = [] as JSX.Element[];
+        if (pkg.versions.length){
+          for (const version of pkg.versions) {
+
+            versions.push(
+              <tr key={nanoid()}>
+                <td>{version.version}</td>
+                <td>{version.installs}</td>
+                <td>{version.isPublic ? 'Yes' : 'No'}</td>
+                <td>{!version.isPublic && version.isStored ? <a className='subtable-link' onClick={e => {
+                  e.preventDefault();
+                  $(e.target).parent().text(version.privateKey);
+                }}>Click to reveal</a> : '---'}</td>
+                <td>{getStatusTextShort(version.status)}</td>
+                <td>{version.isStored ? <a className='subtable-link' onClick={e => {
+                  e.preventDefault();
+                  downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
+                }}>Download</a> : '---'}</td>
+              </tr>
+            );
+          }
+        } else {
+          versions.push(
+            <tr key={nanoid()}>
+              <td colSpan={6}>
+                <p>No versions</p>
+              </td>
+            </tr>
+          );
+        }
+
+        return (
+          <div className='package-subrow'>
+            <h2>{pkg.packageName}</h2>
+            <h3>{pkg.packageId}</h3>
+            
+            <button className='subrow-top-right upload-button action-button' onClick={() => window.location.href = '/edit?packageId=' + pkg.packageId}>Edit</button>
+
+            <p className='package-description'>{pkg.description.length > 1024 ? pkg.description.substring(0, 1021) + '...' : pkg.description}</p>
+            
+            <div className='subtable-wrapper'>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Installs</th>
+                    <th>Public</th>
+                    <th>Private Key</th>
+                    <th>Status</th>
+                    <th>Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versions}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+    } as TableProps<PackageData>;
+
+    return (
+
+      // Packages page
+      <MainContainerRight title='Packages'>
+        <>
+          {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
+          <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
+
+          <Table {...tableParams} />
+        </>
+
+      </MainContainerRight>
+    );
+  }
 
   componentDidMount(): void {
     const token = tokenStorage.checkAuth() as string;
@@ -260,97 +376,9 @@ class Packages extends Component {
               return (
                 <MainContainerRightLoading loadingMessage='Loading Packages & Resources'/>
               );
-            } else if (isPackagePageActive) {
-
-              const columns = {
-                Package: 25,
-                Identifier: 25,
-                'Latest Version': 20,
-                Versions: 15,
-                Description: 15
-              };
-
-              const data = [] as string[][];
-              const subrowData = [] as PackageData[];
-              
-              for (const pkg of this.state.data.packages as PackageData[]) {
-                data.push([pkg.packageName, pkg.packageId, pkg.versions[0].version, pkg.versions.length.toString(), pkg.description.slice(0, 9) + '...']);
-                subrowData.push(pkg);
-              }
-
-              const tableParams = {
-                columns,
-                data,
-                subrowData,
-                emptyMessage: 'No packages',
-                subrowRender: (pkg: PackageData): ReactElement => {
-
-                  const versions = [] as ReactElement[];
-                  for (const version of pkg.versions) {
-
-                    versions.push(
-                      <tr key={nanoid()}>
-                        <td>{version.version}</td>
-                        <td>{version.installs}</td>
-                        <td>{version.isPublic ? 'Yes' : 'No'}</td>
-                        <td>{!version.isPublic && version.isStored ? <a className='subtable-link' onClick={e => {
-                          e.preventDefault();
-                          $(e.target).parent().text(version.privateKey);
-                        }}>Click to reveal</a> : '---'}</td>
-                        <td>{getStatusTextShort(version.status)}</td>
-                        <td>{version.isStored ? <a className='subtable-link' onClick={e => {
-                          e.preventDefault();
-                          downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
-                        }}>Download</a> : '---'}</td>
-                      </tr>
-                    );
-                  }
-
-                  return (
-                    <div className='package-subrow'>
-                      <h2>{pkg.packageName}</h2>
-                      <h3>{pkg.packageId}</h3>
-                      
-                      <button className='subrow-top-right upload-button action-button' onClick={() => window.location.href = '/edit?packageId=' + pkg.packageId}>Edit</button>
-
-                      <p className='package-description'>{pkg.description.length > 1024 ? pkg.description.substring(0, 1024) + '...' : pkg.description}</p>
-                      
-                      <div className='subtable-wrapper'>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Version</th>
-                              <th>Installs</th>
-                              <th>Public</th>
-                              <th>Private Key</th>
-                              <th>Status</th>
-                              <th>Download</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {versions}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                }
-              } as TableProps<PackageData>;
-
-              return (
-
-                // Packages page
-                <MainContainerRight title='Packages'>
-                  <>
-                    {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
-                    <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
-
-                    <Table {...tableParams} />
-                  </>
-
-                </MainContainerRight>
-              );
-            } else if (isResourcesPageActive) {
+            } else if (isPackagePageActive) 
+              return this.packagesPage();
+            else if (isResourcesPageActive) {
               return (
 
                 // Resources page
@@ -380,7 +408,7 @@ class Packages extends Component {
  * @param {VersionStatus} status The status to get the text of.
  * @return {string} The human-readable status.
  */
-function getStatusTextShort(status: VersionStatus) {
+export function getStatusTextShort(status: VersionStatus) {
   switch (status) {
   case VersionStatus.Processing: return 'Processing';
   case VersionStatus.Processed: return 'Processed';
