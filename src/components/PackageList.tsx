@@ -14,25 +14,20 @@
  */
 
 /**
- * A callback executed whenever a row of the package list was updated.
- * 
- * @callback PackageListChange
- * @param {number} index The index of the updated values (corresponds to the provided initial values).
- * @param {string} packageId The current value of the package identifier string.
- * @param {string} versionSelection The current value of the version selection string.
- */
-type PackageListChange = (index: number, packageId: string, versionSelection: string) => void;
-
-/**
  * The props for the package list.
  * 
  * @typedef {Object} PackageListProps 
- * @property {[string, string][]} initialValues A 2d array of data where it's a list of tuples where the first value is the package identifier string, and the second value is the version selection string. Empty rows should have empty data.
- * @property {PackageListChange} onChange The callback to execute when the value of a row is changed.
+ * @property {[string, string][]} list A reference to the 2d array of data, which is a list of tuples where the first value is the package identifier string, and the second value is the version selection string. Empty rows should have empty data.
+ * @property {(boolean) => void} [onChange] The function to run when a list has changed. Parameter is true if the form has an error.
+ * @property {string} title The title of the list.
+ * @property {string} noneText The text to display if no values are present.
+ * @property {string} errProp The prop to set to true or false if an error is in the form.
  */
 export type PackageListProps = {
-  initialValues: [string, string][];
-  onChange: PackageListChange;
+  list: [string, string][];
+  onChange?: (hasError: boolean) => void;
+  title: string;
+  noneText: string;
 };
 
 import { nanoid } from 'nanoid/non-secure';
@@ -46,24 +41,39 @@ import { validateId } from '../scripts/validators';
 // Using state here will cause the text fields to loose focus
 class PackageList extends Component {
 
-  private _values: [string, string][] = [];
   private _keyPrefix = nanoid(4);
+  private _lastLen: number;
 
   constructor(props: PackageListProps) {
     super(props);
-    this._values = JSON.parse(JSON.stringify(props.initialValues));
+
+    this._onChangeCaller = this._onChangeCaller.bind(this);
+    this._lastLen = props.list.length;
   }
 
-  render(): ReactNode {
+  shouldComponentUpdate(): boolean {
+    return this._lastLen !== (this.props as PackageListProps).list.length;
+  }
+
+  private _onChangeCaller(): void {
+    const props = this.props as PackageListProps;
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const func = props.onChange ?? (() => { });
+    func(PackageList.doesListHaveError(props.list));
+  }
+
+  private _createList(): ReactNode {
     const props = this.props as PackageListProps;
 
     const packageIdFields = [];
     const versionSelectFields = [];
-    for (let i = 0; i < this._values.length; ++i){
+    this._lastLen = props.list.length;
+    for (let i = 0; i < props.list.length; ++i){
   
       const packageIdKey = this._keyPrefix + i + '-packageid';
       const versionSelectKey = this._keyPrefix + i + '-versionsel';
-      const [packageIdValue, versionSelectValue] = props.initialValues[i];
+      const [packageIdValue, versionSelectValue] = props.list[i];
 
       const packageIdFieldProps: InputFieldProps = {
         minLength: 6,
@@ -71,9 +81,9 @@ class PackageList extends Component {
         placeholder: 'Package Identifier',
         onChange: e => {
           const val = $(e.target).val() as string;
-          const selectionVal = props.initialValues[i][1];
-          this._values[i] = [val, selectionVal];
-          props.onChange(i, val, selectionVal);
+          const selectionVal = props.list[i][1];
+          props.list[i] = [val, selectionVal];
+          this._onChangeCaller();
         },
         hiddenError: () => {
           const val = $('#' + packageIdKey).val() as (string | undefined) ?? packageIdValue;
@@ -89,9 +99,9 @@ class PackageList extends Component {
         maxLength: 256,
         onChange: e => {
           const val = $(e.target).val() as string;
-          const packageIdVal = props.initialValues[i][0];
-          this._values[i] = [packageIdVal, val];
-          props.onChange(i, packageIdVal, val);
+          const packageIdVal = props.list[i][0];
+          props.list[i] = [packageIdVal, val];
+          this._onChangeCaller();
         },
         hiddenError: () => {
           const val = $('#' + versionSelectKey).val() as (string | undefined) ?? versionSelectValue;
@@ -124,6 +134,52 @@ class PackageList extends Component {
       <>
         {rows}
       </>
+    );
+  }
+
+  render(): ReactNode {
+    const {list, title, noneText} = this.props as PackageListProps;
+
+    return (
+      <>
+        <p>{title}</p>
+        <div className='package-list'>
+          {list.length === 0 && <p className='package-list-empty'>{ noneText }</p>}
+          {this._createList()}
+        </div>
+        <div className='package-list-buttons'>
+          <button
+            type='button'
+            className='list-mod-button left'
+            onClick={() => {
+              list.push(['', '']);  
+              this._onChangeCaller();
+            }}
+          >Add</button>
+          <button
+            type='button'
+            className='list-mod-button right'
+            onClick={() => {
+              list.pop();
+              this._onChangeCaller();
+            }}
+            disabled={!list.length}
+          >Remove</button>
+        </div>
+      </>
+    );
+  }
+
+  /**
+   * Determine if a package list has an error in it.
+   * 
+   * @param {[string, string][]} list The list to check for error.
+   * @returns {boolean} True if the list has an error, or false if it doesn't.
+   */
+  static doesListHaveError(list: [string, string][]): boolean {
+    return !!list.find(([packageId, selection]) => 
+      !packageId || !packageId.length || !validateId(packageId) ||
+      !selection || !selection.length || !new SelectionChecker(selection).isValid
     );
   }
 }

@@ -54,6 +54,8 @@ $right-width: calc(99% - $left-width);
   }
 
   section {
+    width: 100%;
+
     &.input-section {
       display: flex;
       justify-content: space-between;
@@ -72,6 +74,7 @@ $right-width: calc(99% - $left-width);
 
     .left-half,
     .right-half {
+      vertical-align: top;
       box-sizing: border-box;
       display: inline-block;
       padding: 0 2em;

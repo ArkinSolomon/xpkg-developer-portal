@@ -44,8 +44,10 @@ type UploadValues = {
  * @property {number} uploadProgress The progress of the upload, a number from 0 to 1, where 0 is 0% and 1 is 100%.
  * @property {string} [uploadError] Any error that was returned from the server during upload (human-readable).
  * @property {Partial<UploadValues>} errors Any errors with the form.
- * @property {JSX.Element} dependencyList The dependency list rendered. 
- * @property {JSX.Element} incompatibilityList The incompatibility list rendered.
+ * @property {[string, string][]} dependencies The dependencies of the new version being uploaded. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
+ * @property {[string, string][]} incompatibilities The incompatibilities of the new version being uploaded. An array of tuples where the first value is the id of the package that this version is incompatible with, and the second value is the selection string of the incompatibility.
+ * @property {boolean} dependencyErr True if there is an error with the dependency list.
+ * @property {boolean} incompatibilityErr True if there is an error with the incompatibility list.
  */
 type UploadState = {
   isLoading: boolean;
@@ -56,8 +58,10 @@ type UploadState = {
   uploadError?: string;
   errors: Partial<UploadValues>;
   file?: File;
-  dependencyList: JSX.Element;
-  incompatibilityList: JSX.Element;
+  dependencies: [string, string][];
+  incompatibilities: [string, string][];
+  dependencyErr: boolean;
+  incompatibilityErr: boolean;
 }
 
 import { Component } from 'react';
@@ -78,7 +82,6 @@ import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import InputCheckbox from '../components/Input/InputCheckbox';
 import PackageList, { PackageListProps } from '../components/PackageList';
-import { nanoid } from 'nanoid/non-secure';
 import axios, { AxiosError } from 'axios';
 import SelectionChecker from '../scripts/selectionChecker';
 import PackageInfoFields from '../components/PackageInfoFields';
@@ -91,21 +94,18 @@ class Upload extends Component {
   private _packageId?: string;
   private _defaultVersion = '1.0.0';
 
-  private _dependencies: [string, string][] = [];
-  private _incompatibilities: [string, string][] = [];
-
-  private _isMounted = false;
-
   constructor(props: Record<string, never>) {
     super(props);
 
-    const lists = this._genLists();
     this.state = {
       isLoading: true,
       isUploading: false,
       uploadProgress: 0,
       errors: {},
-      ...lists
+      dependencies: [],
+      incompatibilities: [],
+      dependencyErr: false,
+      incompatibilityErr: false
     };    
 
     const token = tokenStorage.checkAuth();
@@ -117,7 +117,6 @@ class Upload extends Component {
   } 
 
   componentDidMount(): void {
-    this._isMounted = true;
     const searchParams = new URLSearchParams(window.location.search);
 
     if (!searchParams.has('packageId')) {
@@ -197,33 +196,6 @@ class Upload extends Component {
     });
   }
 
-  private _genLists(): Pick<UploadState, 'dependencyList' | 'incompatibilityList'> {
-
-    const dependencyListProps: PackageListProps = {
-      initialValues:  this._dependencies,
-      onChange: (i, packageId, versionSelection) => {
-        this._dependencies[i] = [packageId, versionSelection];
-      }
-    };
-    const incompatibilityListProps: PackageListProps = {
-      initialValues:  this._incompatibilities,
-      onChange: (i, packageId, versionSelection) => {
-        this._incompatibilities[i] = [packageId, versionSelection];
-      }
-    };
-
-    // Make sure to generate a random key each render, otherwise it'll be consistent and won't re-render
-    const newValues: Pick<UploadState, 'dependencyList' | 'incompatibilityList'> = {
-      dependencyList: <PackageList {...dependencyListProps} key={nanoid(5)} />,
-      incompatibilityList: <PackageList {...incompatibilityListProps} key={nanoid(5)} />
-    };
-
-    if (this._isMounted) 
-      this.setState(newValues as Partial<UploadState>);
-    
-    return newValues;
-  }
-
   private _validate({ packageVersion, xplaneSelection }: UploadValues): FormikErrors<UploadValues> {
     packageVersion = packageVersion.trim();
     xplaneSelection = xplaneSelection.trim();
@@ -270,8 +242,8 @@ class Upload extends Component {
     formData.append('isPublic', isPublic ? 'true' : 'false');
     formData.append('isPrivate', isPrivate ? 'true' : 'false');
     formData.append('isStored', isStored ? 'true' : 'false');
-    formData.append('dependencies', JSON.stringify(this._dependencies));
-    formData.append('incompatibilities', JSON.stringify(this._incompatibilities));
+    formData.append('dependencies', JSON.stringify(this.state.dependencies));
+    formData.append('incompatibilities', JSON.stringify(this.state.incompatibilities));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formData.append('file', (document.getElementById('package-file') as any).files[0]);
@@ -333,6 +305,28 @@ class Upload extends Component {
       text: this.state.uploadProgress < 1 ? `Uploading -- ${Math.round(this.state.uploadProgress * 100)}%` : 'Waiting for Upload Confirmation...'
     };
 
+    const dependencyListProps: PackageListProps = {
+      list: this.state.dependencies,
+      onChange: err => {
+        this.setState({
+          dependencyErr: err
+        });
+      },
+      title: 'Dependencies',
+      noneText: 'No dependencies'
+    };
+
+    const incompatibilityListProps: PackageListProps = {
+      list: this.state.incompatibilities,
+      onChange: err => {
+        this.setState({
+          incompatibilityErr: err
+        });
+      },
+      title: 'Incompatibilities',
+      noneText: 'No incompatibilities'
+    };
+
     return (
       <>
         <LoadingBarPopup {...loadingBarProps} />
@@ -362,7 +356,6 @@ class Upload extends Component {
                   values,
                   handleChange,
                   handleSubmit,
-                  isSubmitting,
                   setFieldValue
                 }) => {
                   const parsedVersion = Version.fromString(values.packageVersion);
@@ -423,6 +416,7 @@ class Upload extends Component {
                     <>
                       <ErrorMessage text={this.state.uploadError ?? ''} show={!!this.state.uploadError} />
                       <form
+                        id='upload-form'
                         onSubmit={handleSubmit}
                         onChange={handleChange}
                         onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
@@ -433,9 +427,9 @@ class Upload extends Component {
                           packageType={this.state.packageData?.packageType as PackageType}
                         />
 
-                        <section className='mt-9'>
+                        <section className='no-border mt-9'>
 
-                          <div className='left-half no-border'>
+                          <div className='left-half'>
                             <InputField {...packageVersionProps} />
                           </div>
 
@@ -444,9 +438,9 @@ class Upload extends Component {
                           </div>
 
                         </section>
-                        <section className='mt-9'>
+                        <section className='no-border mt-9'>
                           
-                          <div className='left-half no-border'>
+                          <div className='left-half'>
                             <InputField {...xpCompatiblityFieldProps} />
                           </div>
 
@@ -471,70 +465,21 @@ class Upload extends Component {
                             </div>
                           </div>  
                         </section>
-
-                        <section className='mt-11 top-border'>
-                          
-                          <div className='left-half'>
-                            <p>Dependencies</p>
-                            <div className='package-list'>
-                              {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
-                              {this.state.dependencyList}
-                            </div>
-                            <div className='package-list-buttons'>
-                              <button
-                                type='button'
-                                className='list-mod-button left'
-                                onClick={() => {
-                                  this._dependencies.push(['', '']);
-                                  this._genLists();
-                                }}
-                              >Add</button>
-                              <button
-                                type='button'
-                                className='list-mod-button right'
-                                onClick={() => {
-                                  this._dependencies.pop();
-                                  this._genLists();
-                                }}
-                                disabled={!this._dependencies.length}
-                              >Remove</button>
-                            </div>
+                        <section className='mt-[5.5rem]'>
+                          <div className='left-half'>              
+                            <PackageList {...dependencyListProps} />
                           </div>
-                          
                           <div className='right-half'>
-                            <p>Incompatibilities</p>
-                            <div className='package-list'>
-                              {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
-                              {this.state.incompatibilityList}
-                            </div>
-                            <div className='package-list-buttons'>
-                              <button
-                                type='button'
-                                className='list-mod-button left'
-                                onClick={() => {
-                                  this._incompatibilities.push(['', '']);
-                                  this._genLists();
-                                }}
-                              >Add</button>
-                              <button
-                                type='button'
-                                className='list-mod-button right'
-                                onClick={() => {
-                                  this._incompatibilities.pop();
-                                  this._genLists();
-                                }}
-                                disabled={!this._incompatibilities.length}
-                              >Remove</button>
-                            </div>
+                            <PackageList {...incompatibilityListProps} />
                           </div>
-
                         </section>
                         <section className='relative mt-9'>
                           <input
+                            form='upload-form'
                             className='primary-button float-right'
                             type='submit'
                             value='Upload'
-                            disabled={isSubmitting || !!Object.keys(this.state.errors).length || !!this.state.uploadError || !this.state.file}
+                            disabled={this.state.isUploading || !!Object.keys(this.state.errors).length || !!this.state.uploadError || !this.state.file || this.state.dependencyErr || this.state.incompatibilityErr}
                           />
                         </section>
                       </form>

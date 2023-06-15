@@ -19,10 +19,14 @@
  * @typedef {Object} ModifyState
  * @property {boolean} isLoading True if the page is loading (getting data from the registry).
  * @property {string} [errorMessage] Any errors that occured while fetching package data. If not undefined, it will display the error page with this message.
+ * @property {[string, string][]} dependencies The dependencies of the version being modified. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
+ * @property {[string, string][]} incompatibilities The incompatibilities of the version being modified. An array of tuples where the first value is the id of the package that this version is incompatible with, and the second value is the selection string of the incompatibility.
  */
 type ModifyState = {
   isLoading: boolean;
   errorMessage?: string;
+  dependencies: [string, string][],
+  incompatibilities: [string, string][]
 };
 
 import { Component, ReactNode } from 'react';
@@ -36,6 +40,7 @@ import MainContainerContent from '../components/Main Container/MainContainerCont
 import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 import MainContainerError from '../components/Main Container/MainContainerError';
 import PackageInfoFields from '../components/PackageInfoFields';
+import PackageList, { PackageListProps } from '../components/PackageList';
 
 class Modify extends Component {
   
@@ -48,7 +53,9 @@ class Modify extends Component {
     super(props);
 
     this.state = {
-      isLoading: true
+      isLoading: true,
+      dependencies: [],
+      incompatibilities: []
     };
 
     const token = tokenStorage.checkAuth();
@@ -155,17 +162,44 @@ class Modify extends Component {
         this.setState({
           errorMessage: 'Version data not found on client'
         } as Partial<ModifyState>);
-        return (<p>Error... please wait</p>);
+        return (<p>Error... please wait</p>); // Will load error page once state is set
       }
+
+      const dependencyListProps: PackageListProps = {
+        list: this.state.dependencies,
+        title: 'Dependencies',
+        noneText: 'No dependencies'
+      };
+
+      const incompatibilityListProps: PackageListProps = {
+        list: this.state.incompatibilities,
+        title: 'Incompatibilities',
+        noneText: 'No incompatibilities'
+      };
 
       return (
         <MainContainer>
           <MainContainerContent title='Modify version'>
-            <PackageInfoFields
-              packageId={this._versionData.packageId}
-              packageName={this._packageData?.packageName as string}
-              packageType={this._packageData?.packageType as PackageType}
-            />
+            <>
+              <PackageInfoFields
+                packageId={this._versionData.packageId}
+                packageName={this._packageData?.packageName as string}
+                packageType={this._packageData?.packageType as PackageType}
+                packageVersion={this._versionData.version}
+              />
+
+              <section className='mt-11 top-border'>
+                          
+                <div className='left-half'>                  
+                  <PackageList {...dependencyListProps} />
+                </div>
+                          
+                <div className='right-half'>
+                  <PackageList {...incompatibilityListProps} />
+                </div>
+
+              </section>
+            </>
           </MainContainerContent>
         </MainContainer>
       );
