@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023. Arkin Solomon.
+ * Copyright (c) 2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,51 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-@import "_colors.scss";
-@import "_fonts.scss";
-@import "_mixins.scss";
 
-.main-container-right {
-  width: 100%;
-  font-family: $noto-sans;
+.access-config {
+  .access-config-label {
+    display: block;
+    margin-bottom: 10px;
+  }
 
-  .package-upload-input {
+  .checkboxes {
+    display: flex;
+    margin: 0 -1em;
+  }
+
+  .input-checkbox {
+    margin: 0 1em;
     display: inline-block;
-    margin-left: 40px;
-    height: 70px;
-
-    &:first-of-type {
-      margin-left: 0;
-    }
-  }
-
-  .upload-input-section {
-    width: 100%;
-    min-height: 10px;
-
-    h2 {
-      font-size: 15pt;
-      color: $dark-blue;
-    }
-
-    &.top-margin {
-      margin-top: 20px;
-    }
-
-    &.bottom-margin {
-      margin-bottom: 35px;
-    }
-
-    .right {
-      float: right;
-    }
-  }
-
-  input[type="submit"] {
-    @include primary-button;
-
-    width: 105px;
-    margin-top: 35px;
-    bottom: 0;
+    flex-shrink: 1;
   }
 }

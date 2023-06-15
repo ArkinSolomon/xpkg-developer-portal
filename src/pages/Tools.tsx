@@ -1,27 +1,26 @@
 /*
  * Copyright (c) 2022-2023. Arkin Solomon.
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
  *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an "AS IS" BASIS,
+ * software distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
 import { Component, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
-import SideBar from '../components/SideBar';
-import MainContainerRight from '../components/Main Container/MainContainerRight';
+import SideBar from '../components/Main Container/SideBar';
+import MainContainerContent from '../components/Main Container/MainContainerContent';
 import { Formik } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/Tools.scss';
 import Version from '../scripts/version';
 import SelectionChecker from '../scripts/selectionChecker';
-import { version } from 'os';
 
 /**
  * An enumeration for all of the different tools available.
@@ -102,14 +101,14 @@ export default class Tools extends Component {
               text: 'Version Testing',
               action: () => this.setCurrentPage(ToolPages.VersionStrings)
             },
-            {
-              text: 'Hidden Packages',
-              action: () => this.setCurrentPage(ToolPages.HiddenPackages)
-            },
-            {
-              text: 'Incompatibility Strings',
-              action: () => this.setCurrentPage(ToolPages.IncompatibilityGenerator)
-            }
+            // {
+            //   text: 'Hidden Packages',
+            //   action: () => this.setCurrentPage(ToolPages.HiddenPackages)
+            // },
+            // {
+            //   text: 'Incompatibility Strings',
+            //   action: () => this.setCurrentPage(ToolPages.IncompatibilityGenerator)
+            // }
           ]}
         />}
 
@@ -117,7 +116,7 @@ export default class Tools extends Component {
         <>
           {
             this.state.currentPage === ToolPages.VersionStrings &&
-          <MainContainerRight title='Version Testing'>
+          <MainContainerContent title='Version Testing'>
             <Formik
               validate={({ testVersion: testVersionStr, testVersionSelection: testVersionSelectionStr }) => {
                 const versionTesterErrors: Partial<VersionTesterValues> = {};
@@ -185,10 +184,9 @@ export default class Tools extends Component {
               onSubmit={() => void (0)}
             >{({ handleChange }) => {
                 const testVersionField: InputFieldProps = {
-                  title: 'Version',
+                  label: 'Version',
                   name: 'testVersion',
                   placeholder: 'x.x.x',
-                  width: '50%',
                   minLength: 1,
                   maxLength: 15,
                   onChange: handleChange,
@@ -196,10 +194,9 @@ export default class Tools extends Component {
                 };
                     
                 const testVersionSelectionField: InputFieldProps = {
-                  title: 'Version Selection',
+                  label: 'Version Selection',
                   name: 'testVersionSelection',
                   placeholder: 'x.x.x-x.x.x',
-                  width: '85%',
                   minLength: 1,
                   maxLength: 256,
                   onChange: handleChange,
@@ -208,43 +205,20 @@ export default class Tools extends Component {
 
                 return (
                   <>
-                    <p id="version-selection-output" dangerouslySetInnerHTML={{__html: this.state.versionTesterOutput}}></p>
-                    <div className="upload-input-section bottom-margin">
-                      <div className="left-half">
+                    <p id='version-selection-output' dangerouslySetInnerHTML={{__html: this.state.versionTesterOutput}}></p>
+                    <section className='input-section no-border my-6'>
+                      <div className='left-half'>
                         <InputField {...testVersionField} />
                       </div>
-                      <div className="right-half">
+                      <div className='right-half'>
                         <InputField {...testVersionSelectionField} />
                       </div>
-                    </div>
+                    </section>
                   </>
                 );     
               }}
             </Formik>
-          </MainContainerRight>
-          }
-          {
-            this.state.currentPage === ToolPages.HiddenPackages &&
-          <MainContainerRight title='Hidden Packages'>
-            <p>Hidden Packages</p>
-          </MainContainerRight>
-          }
-          {
-            this.state.currentPage === ToolPages.IncompatibilityGenerator &&
-          <MainContainerRight title='Incompatibility String Generator'>
-            <Formik
-              validate={values => {
-                return {};
-              }}
-              initialValues={{}}
-              onSubmit={() => void (0)}
-            >{({ handleChange }) => {
-                return (
-                  <p>Incompatibility Generator</p>
-                );     
-              }}
-            </Formik>
-          </MainContainerRight>
+          </MainContainerContent>
           }
         </>
       }

@@ -48,9 +48,8 @@ type CreateValues = {
 import { Component } from 'react';
 import { Formik, FormikErrors } from 'formik';
 import AuthBox from '../components/AuthBox';
-import InputField from '../components/Input/InputField';
+import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/AuthBox.scss';
-import '../css/AuthMenus.scss';
 import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
@@ -103,7 +102,7 @@ class Create extends Component {
           (values, { setSubmitting }) => {
             this.setState({
               errorMessage: ''
-            });
+            } as Partial<CreateState>);
             const { email, password, name } = values;
             http.httpRequest('http://localhost:5020/auth/create',HTTPMethod.POST, void (0), { email, password, name }, (err, r) => {
               setSubmitting(false);
@@ -149,43 +148,41 @@ class Create extends Component {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
           const errorMessageActive = (this.state as CreateState).errorMessage !== '';
 
-          const sharedAttributes = {
-            center: true,
-            width: '80%' ,
+          const emailFieldData: InputFieldProps = {
+            name: 'email',
+            label: 'Email',
             onChange: handleChange
           };
 
-          const emailFieldData = {
-            name: 'email',
-            title: 'Email' 
-          };
-
-          const nameFieldData = {
+          const nameFieldData: InputFieldProps = {
             name:'name',
-            title:'Name'
+            label:'Name',
+            onChange: handleChange
           };
           
-          const passwordFieldData = {
+          const passwordFieldData: InputFieldProps = {
             name: 'password',
-            title: 'Password',
-            type: 'password'
+            label: 'Password',
+            type: 'password',
+            onChange: handleChange
           };
 
-          const checkPasswordFieldData = {
+          const checkPasswordFieldData: InputFieldProps = {
             name: 'checkPassword',
-            title: 'Re-enter Password',
-            type: 'password'
+            label: 'Re-enter Password',
+            type: 'password',
+            onChange: handleChange
           };
 
           return (
             <AuthBox title='Create Account' onSubmit={handleSubmit} isSubmitting={isSubmitting} submitEnabled={!errorMessageActive && !(this.state as CreateState).invalidForm}>
               <ErrorMessage text={(this.state as CreateState).errorMessage} show={errorMessageActive} width='80%' center={true} />
-              <InputField  {...sharedAttributes} {...emailFieldData} />
-              <InputField {...sharedAttributes} {...nameFieldData}/>
-              <InputField  {...sharedAttributes} {...passwordFieldData}/>
-              <InputField  {...sharedAttributes} {...checkPasswordFieldData}/>
-              <Checkbox name='rememberMe' title='Remember Me' center={true} onChange={handleChange} />
-              <Checkbox name='agree' title='I agree to the privacy policy' center={true} onChange={handleChange} />
+              <InputField {...emailFieldData} />
+              <InputField {...nameFieldData}/>
+              <InputField {...passwordFieldData}/>
+              <InputField {...checkPasswordFieldData}/>
+              <Checkbox name='rememberMe' title='Remember Me' onChange={handleChange} />
+              <Checkbox name='agree' title='I agree to the privacy policy' onChange={handleChange} />
               <div className="help-links">
                 <a href="/" className={linkDisabled}>Login Instead</a>
                 <a href="/privacy-policy" className={linkDisabled}>Privacy Policy</a>

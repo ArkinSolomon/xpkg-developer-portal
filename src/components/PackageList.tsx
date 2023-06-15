@@ -44,7 +44,7 @@ import SelectionChecker from '../scripts/selectionChecker';
 import { validateId } from '../scripts/validators';
 
 // Using state here will cause the text fields to loose focus
-export default class PackageList extends Component {
+class PackageList extends Component {
 
   private _values: [string, string][] = [];
   private _keyPrefix = nanoid(4);
@@ -69,8 +69,6 @@ export default class PackageList extends Component {
         minLength: 6,
         maxLength: 32,
         placeholder: 'Package Identifier',
-        width: '90%',
-        center: true,
         onChange: e => {
           const val = $(e.target).val() as string;
           const selectionVal = props.initialValues[i][1];
@@ -87,10 +85,8 @@ export default class PackageList extends Component {
       
       const versionSelectFieldProps: InputFieldProps = {
         placeholder: 'x.x.x-x.x.x',
-        width: '90%',
         minLength: 1,
         maxLength: 256,
-        center: true,
         onChange: e => {
           const val = $(e.target).val() as string;
           const packageIdVal = props.initialValues[i][0];
@@ -116,12 +112,10 @@ export default class PackageList extends Component {
   
       rows.push(
         <div className='package-list-row' key={nanoid(10)}>
-          <div className="package-list-input-wrapper">
+          <>
             {packageIdField}
-          </div>
-          <div className="package-list-input-wrapper">
             {versionSelectField}
-          </div>
+          </>
         </div>
       );
     }
@@ -133,3 +127,5 @@ export default class PackageList extends Component {
     );
   }
 }
+
+export default PackageList;

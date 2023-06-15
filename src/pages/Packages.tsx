@@ -49,8 +49,7 @@ export enum PackageType {
 export enum VersionStatus {
   Processing = 'processing', 
   Processed = 'processed',
-  Downloaded = 'downloaded',
-  Removed = 'removed', 
+  Expired = 'expired',
   FailedMACOSX = 'failed_macosx',
   FailedNoFileDir = 'failed_no_file_dir', 
   FailedManifestExists = 'failed_manifest_exists', 
@@ -132,13 +131,14 @@ type PackagesState = {
 
 import { Component, ReactElement, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
-import MainContainerRight from '../components/Main Container/MainContainerRight';
-import MainContainerRightError from '../components/Main Container/MainContainerRightError';
-import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
-import SideBar from '../components/SideBar';
+import MainContainerContent from '../components/Main Container/MainContainerContent';
+import MainContainerError from '../components/Main Container/MainContainerError';
+import MainContainerLoading from '../components/Main Container/MainContainerLoading';
+import SideBar from '../components/Main Container/SideBar';
 import {  downloadFile, httpRequest } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
+import '../css/Buttons.scss';
 import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Table';
 import { nanoid } from 'nanoid';
@@ -170,21 +170,14 @@ class Packages extends Component {
 
     const token = tokenStorage.checkAuth();
     if (!token) {
+      tokenStorage.delToken();
       sessionStorage.setItem('post-auth-redirect', '/packages');
       window.location.href = '/';
       return;
     }   
   } 
   
-  packagesPage(): JSX.Element {
-    const columns = {
-      Package: 25,
-      Identifier: 25,
-      'Latest Version': 20,
-      Versions: 15,
-      Description: 15
-    };
-
+  private _packagesPage(): JSX.Element {
     const data = [] as string[][];
     const subrowData = [] as PackageData[];
     
@@ -207,6 +200,15 @@ class Packages extends Component {
       subrowData.push(pkg);
     }
 
+    // Columns and their percentage of width
+    const columns = {
+      Package: 25,
+      Identifier: 25,
+      'Latest Version': 20,
+      Versions: 15,
+      Description: 15
+    };
+
     const tableParams = {
       columns,
       data,
@@ -228,7 +230,7 @@ class Packages extends Component {
                   $(e.target).parent().text(version.privateKey);
                 }}>Click to reveal</a> : '---'}</td>
                 <td>{getStatusTextShort(version.status)}</td>
-                <td>{version.isStored ? <a className='subtable-link' onClick={e => {
+                <td>{version.isStored && version.loc !== '---' ? <a className='subtable-link' onClick={e => {
                   e.preventDefault();
                   downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
                 }}>Download</a> : '---'}</td>
@@ -250,7 +252,10 @@ class Packages extends Component {
             <h2>{pkg.packageName}</h2>
             <h3>{pkg.packageId}</h3>
             
-            <button className='subrow-top-right upload-button action-button' onClick={() => window.location.href = '/edit?packageId=' + pkg.packageId}>Edit</button>
+            <button
+              className='subrow-top-right primary-button'
+              onClick={() => window.location.href = '/packages/package?packageId=' + pkg.packageId}
+            >Package Information</button>
 
             <p className='package-description'>{pkg.description.length > 1024 ? pkg.description.substring(0, 1021) + '...' : pkg.description}</p>
             
@@ -261,7 +266,7 @@ class Packages extends Component {
                     <th>Version</th>
                     <th>Installs</th>
                     <th>Public</th>
-                    <th>Private Key</th>
+                    <th style={{ width: '47%' }}>Private Key</th>
                     <th>Status</th>
                     <th>Download</th>
                   </tr>
@@ -279,15 +284,15 @@ class Packages extends Component {
     return (
 
       // Packages page
-      <MainContainerRight title='Packages'>
+      <MainContainerContent title='Packages'>
         <>
           {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
-          <button className='upload-button' onClick={() => window.location.href = '/packages/upload'}><span>+</span>&nbsp;Upload a new package</button>
+          <button className='primary-button' onClick={() => window.location.href = '/packages/new'}><span className='leading-4 text-[24pt]'>+</span>&nbsp;Upload a new package</button>
 
           <Table {...tableParams} />
         </>
 
-      </MainContainerRight>
+      </MainContainerContent>
     );
   }
 
@@ -370,29 +375,33 @@ class Packages extends Component {
           ((): ReactNode => {
             if (this.state.errorMessage) {
               return (
-                <MainContainerRightError message={this.state.errorMessage} />
+                <MainContainerError
+                  message={this.state.errorMessage}
+                  linkName='Return Home'
+                  link='/packages'
+                />
               );
             } else if (this.state.isLoading) {
               return (
-                <MainContainerRightLoading loadingMessage='Loading Packages & Resources'/>
+                <MainContainerLoading loadingMessage='Loading Packages and Resources'/>
               );
             } else if (isPackagePageActive) 
-              return this.packagesPage();
+              return this._packagesPage();
             else if (isResourcesPageActive) {
               return (
 
                 // Resources page
-                <MainContainerRight title='Resources'>
+                <MainContainerContent title='Resources'>
                   <p>Resources</p>
-                </MainContainerRight>
+                </MainContainerContent>
               );
             } else {
               return (
 
                 // Reports page
-                <MainContainerRight title='Bug Reports'>
+                <MainContainerContent title='Bug Reports'>
                   <p>Reports</p>
-                </MainContainerRight>
+                </MainContainerContent>
               );
             }
           })()
@@ -412,8 +421,7 @@ export function getStatusTextShort(status: VersionStatus) {
   switch (status) {
   case VersionStatus.Processing: return 'Processing';
   case VersionStatus.Processed: return 'Processed';
-  case VersionStatus.Downloaded: return 'Downloaded';
-  case VersionStatus.Removed: return 'Removed';
+  case VersionStatus.Expired: return 'Expired';
   case VersionStatus.FailedInvalidFileTypes:
   case VersionStatus.FailedMACOSX:
   case VersionStatus.FailedManifestExists:

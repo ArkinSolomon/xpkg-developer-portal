@@ -22,15 +22,16 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Create from './pages/Create';
 import Packages from './pages/Packages';
-import Upload from './pages/Upload';
+import NewPackage from './pages/NewPackage';
 import NotFound from './pages/NotFound';
 import Support from './pages/Support';
 import Account from './pages/Account';
-import Edit from './pages/Edit';
+import PackageInformation from './pages/PackageInformation';
 import Footer from './components/Footer';
-import Incompatibility from './pages/Incompatibility';
 import Tools from './pages/Tools';
 import Verify from './pages/Verify';
+import Upload from './pages/Upload';
+import Modify from './pages/Modify';
 
 function App() {
   return (
@@ -39,17 +40,21 @@ function App() {
       <Routes>
         <Route path='/' element={<Login />} />
         <Route path='/create' element={<Create />} />
-        <Route path='/packages' element={<Packages />} />
-        <Route path='/packages/upload' element={<Upload />} />
+
         <Route path='/support' element={<Support />} />
         <Route path='/account' element={<Account />} />
-        <Route path='/edit' element={<Edit />} />
-        <Route path='/incompatibility' element={<Incompatibility />} />
         <Route path='/tools' element={<Tools />} />
+
+        <Route path='/packages' element={<Packages />} />
+        <Route path='/packages/package' element={<PackageInformation />} />
+        <Route path='/packages/modify' element={ <Modify />} />
+        <Route path='/packages/new' element={<NewPackage />} />
+        <Route path='/packages/upload' element={<Upload />} />
         
         {/* We use /verify twice because /verify/ is not caught by /verify/:verificationToken */}
         <Route path='/verify' element={<Verify />} />
         <Route path='/verify/:verificationToken' element={<Verify />} />
+        
         <Route path='*' element={<NotFound />} />
       </Routes>
       <Footer />

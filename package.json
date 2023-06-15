@@ -2,6 +2,7 @@
   "name": "xpkg-developer-portal",
   "version": "0.1.0",
   "private": true,
+  "description": "Where X-Pkg package creators upload their packages",
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",

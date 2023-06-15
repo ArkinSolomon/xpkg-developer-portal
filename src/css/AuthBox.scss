@@ -21,7 +21,7 @@ $auth-box-width: 24em;
 
 #auth-box-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   height: 100%;
 }
@@ -44,19 +44,31 @@ $auth-box-width: 24em;
 
   #auth-box-children-wrapper {
     padding: 12px;
-    margin-top: 1em;
     height: calc($auth-box-height - 7em);
     width: 80%;
 
     border-radius: 4px;
     border: 1px solid $really-light-gray;
 
+    margin-top: 1em;
     margin-left: auto;
     margin-right: auto;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    .input-field {
+      width: 85%;
+      margin: 0.5em auto;
+    }
+
+    .input-checkbox {
+      margin: 0.25em auto;
+    }
   }
 
   input[type="submit"] {
-
     @include primary-button;
 
     display: block;
@@ -66,5 +78,28 @@ $auth-box-width: 24em;
     transform: translateY(-50%);
     width: 60%;
     height: 45px;
+  }
+
+  .help-links {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2.4em;
+    margin: 0 auto;
+
+    a {
+      color: $light-gray;
+      text-decoration: underline;
+      font-family: $noto-sans;
+      font-size: 9pt;
+      text-align: center;
+      display: block;
+      margin: 11px 0;
+
+      &.linkDisabled {
+        pointer-events: none;
+        cursor: not-allowed;
+      }
+    }
   }
 }

@@ -17,10 +17,13 @@
 @import "_mixins.scss";
 
 .input {
-  margin-top: 15px;
   font-family: $noto-sans;
   display: block;
   position: relative;
+
+  label {
+    white-space: nowrap;
+  }
 
   .error {
     color: $error-red;
@@ -37,41 +40,38 @@
     position: absolute;
     left: 0;
   }
-}
 
-.input-field {
-
-  &.center {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  input {
-    display: block;
-    border-radius: 5px;
-    border: 1px solid $light-gray;
-
-    padding-left: 4px;
+  input,
+  select {
     margin-top: 8px;
     font-size: 11pt;
 
     height: 18pt;
     width: 100%;
+
+    padding-left: 7px;
+  }
+}
+
+.input-field {
+  input {
+    appearance: none;
+
+    display: block;
+    border-radius: 5px;
+    border: 1px solid $light-gray;
   }
 }
 
 .input-checkbox {
-  font-size: 9pt;
-  display: inline-block;
-
-  &.block {
-    display: block;
-  }
+  font-size: 10pt;
 
   input {
+    position: relative;
     display: inline-block;
     margin-right: 8px;
-
+    cursor: pointer;
+    
     appearance: none;
     background-color: white;
 
@@ -88,7 +88,7 @@
 
     &:checked {
       background-color: $dark-blue;
-      
+
       border: 2px solid $light-gray;
       border-radius: 4px;
 
@@ -102,7 +102,7 @@
         left: -1px;
         right: -1px;
         bottom: -1px;
-        
+
         border: 2px solid white;
         border-radius: 4px;
       }
@@ -113,8 +113,12 @@
     }
   }
 
-  &.center {
-    text-align: center;
+  label {
+    height: 1.4em;
+    vertical-align: text-bottom;
+    display: inline-block;
+    // display: contents;
+    // line-height: 1.4em;
   }
 }
 
@@ -130,20 +134,16 @@
     border-radius: 5px;
     border: 1px solid $light-gray;
 
-    padding: 0 10px;
-
     font-size: 11pt;
     background: url('../../public/dropdown-arrow.png') 96% / 15% no-repeat white;
-  }
 
-  label {
-    display: block;
-    margin-bottom: 10px;
-  }
+    &:disabled {
+      appearance: none;
 
-  // &.center {
-  // Not implemented
-  // }
+      background: $disabled-gray;
+      color: black;
+    }
+  }
 }
 
 .input-area {
@@ -173,21 +173,30 @@
 }
 
 .input-field,
+.input-dropdown,
 .input-area {
 
-  &.input-readonly input {
-    background-color: $disabled-gray;
+  &.input-readonly {
+
+    input,
+    select {
+      text-align-last: center;
+      background-color: $disabled-gray;
+    }
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     transition: border .1s;
+    font-family: $noto-sans;
   }
 
   &.error-outline {
 
     input,
-    textarea {
+    textarea,
+    select {
       border: 1px solid $error-red;
     }
   }
@@ -195,6 +204,10 @@
 
 .input-file {
   font-family: $noto-sans;
+
+  p {
+    margin-bottom: 4px;
+  }
 
   label {
     @include primary-button;

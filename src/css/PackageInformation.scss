@@ -16,16 +16,12 @@
 @import "_fonts.scss";
 @import "_mixins.scss";
 
-.relative {
-  position: relative;
-}
+#versions-header {
+  margin-top: 4em;
 
-.upload-input-section.relative {
-  min-height: 2em;
-
-  input[type="submit"] {
-    position: absolute;
-    right: 0;
+  h2 {
+    font-size: 15pt;
+    color: $dark-blue;
   }
 }
 
@@ -64,73 +60,6 @@ div.subrow-top-right {
   }
 }
 
-.access-config {
-  .access-config-label {
-    display: block;
-    margin-bottom: 10px;
-  }
-
-  .input-checkbox {
-    margin-left: 7px;
-  }
-}
-
-.upload-input-section {
-
-  &.extra-top-margin {
-    margin-top: 45px;
-  }
-
-  &.flex-section {
-    display: flex;
-    align-items: stretch;
-  }
-
-  .left-half {
-    display: inline-block;
-    width: 50%;
-  }
-
-  .right-half {
-    display: inline-block;
-    margin-left: auto;
-    width: 50%;
-  }
-
-  .left-third,
-  .middle-third,
-  .right-third {
-
-    &.other-borders,
-    &.right-border {
-      vertical-align: top;
-    }
-  }
-
-  .left-third,
-  .middle-third {
-    display: inline-block;
-    width: 33%;
-
-    &.right-border {
-      padding-left: 6px;
-      padding-right: 6px;
-      border-right: 1px solid $light-gray;
-      box-sizing: border-box;
-    }
-  }
-
-  .right-third {
-    display: inline-block;
-    width: 33%;
-
-    &.other-borders {
-      padding-left: 6px;
-      padding-right: 6px;
-      box-sizing: border-box;
-    }
-  }
-}
 
 .package-list-buttons {
   margin-top: 25px;

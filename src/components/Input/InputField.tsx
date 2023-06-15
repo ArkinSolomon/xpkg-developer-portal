@@ -18,10 +18,8 @@
  * 
  * @typedef {Object} InputFieldProps
  * @property {string} [name] The name of the field.
- * @property {string} [title] The title value of the field. Used if placeholder is not provided.
- * @property {string} [placeholder] The placeholder value of the field.
- * @property {boolean} [center=false] True if the field should be centered.
- * @property {string} [width] A custom value for the width property.
+ * @property {string} [label] The label value of the field.
+ * @property {string} [placeholder] The placeholder value of the field. The label is used if it is provided and placeholder is not.
  * @property {string} [defaultValue] The default value of the field.
  * @property {string} [value] The current value of the field. 
  * @property {string} [type=text] An alternate type of input.
@@ -36,10 +34,8 @@
  */
 export type InputFieldProps = {
   name?: string;
-  title?: string;
+  label?: string;
   placeholder?: string;
-  center?: boolean;
-  width?: string;
   type?: string;
   defaultValue?: string;
   value?: string;
@@ -121,23 +117,20 @@ class InputField extends Component {
 
     if (hasError)
       propsClasses.push('error-outline');
-    if (props.center)
-      propsClasses.push('center');
     if (props.readonly)
       propsClasses.push('input-readonly');
     
     const classes = 'input input-field ' + propsClasses.join(' ');
-    const width = props.width ?? '120px';
     const type = props.type ?? 'text';
 
     return (
-      <div className={classes} style={{ width }}>
-        {props.title && <label htmlFor={props.name}>{props.title}</label>}
+      <div className={classes}>
+        {props.label && <label htmlFor={this.state.id}>{props.label}</label>}
         <input
           id={this.state.id}
           type={type}
           name={props.name}
-          placeholder={props.placeholder ?? props.title}
+          placeholder={props.placeholder ?? props.label}
           defaultValue={props.defaultValue}
           value={props.value}
           onChange={props.onChange}

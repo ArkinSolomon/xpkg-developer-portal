@@ -22,6 +22,8 @@ $left-width: 15%;
 $right-width: calc(99% - $left-width);
 
 #main-container {
+  font-family: $noto-sans;
+
   width: 80vw;
   margin-left: auto;
   margin-right: auto;
@@ -30,35 +32,102 @@ $right-width: calc(99% - $left-width);
   padding-bottom: 0;
   display: flex;
 
-  #left {
+  #main-container-left {
     float: left;
     width: 15%;
   }
 
-  #right {
+  #main-container-right {
     width: $right-width;
     float: right;
   }
+}
 
-  .error-screen {
-    font-family: $noto-sans;
-    width: 100%;
+.main-container-content {
+  padding: 0 1.1em;
+  width: 100%;
 
-    text-align: center;
+  h1 {
     color: $dark-blue;
+    font-size: 20pt;
+    margin-bottom: 10px;
+  }
 
-    button {
-      @include primary-button();
-      
-      margin-bottom: 30px;
+  section {
+    &.input-section {
+      display: flex;
+      justify-content: space-between;
+      margin-left: -1em;
+      margin-right: -1em;
+
+      .input {
+        margin: 0 1em;
+        max-width: 33%;
+      }
+
+      .input-field {
+        flex-grow: 1;
+      }
     }
 
-    img {
-      display: block;
-      width: 100px;
-      height: 100px;
-      margin-left: auto;
-      margin-right: auto;
+    .left-half,
+    .right-half {
+      box-sizing: border-box;
+      display: inline-block;
+      padding: 0 2em;
+      width: 50%;
+
+      .input {
+        max-width: 85%;
+      }
     }
+
+    .left-half {
+      border-right: 1px solid $light-gray;
+    }
+
+    .left-third,
+    .middle-third,
+    .right-third {
+      vertical-align: top;
+      padding: 0 2em;
+      display: inline-block;
+      box-sizing: border-box;
+    }
+
+    .left-third,
+    .middle-third {
+      border-right: 1px solid $light-gray;
+    }
+
+    &.no-border {
+
+      .left-third,
+      .middle-third,
+      .left-half {
+        border: 0;
+      }
+    }
+  }
+}
+
+.error-screen {
+  font-family: $noto-sans;
+  width: 100%;
+
+  text-align: center;
+  color: $dark-blue;
+
+  button {
+    @include primary-button();
+    margin-bottom: 30px;
+  }
+
+  img {
+    display: block;
+    width: 100px;
+    height: 100px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }

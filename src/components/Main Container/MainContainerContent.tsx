@@ -12,16 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-@import "_colors.scss";
-@import "_fonts.scss";
+import { ReactElement } from 'react';
+import '../../css/MainContainer.scss';
 
-.main-container-right {
-  font-family: $noto-sans;
-  padding: 0 1.1em;
-
-  h1 {
-    color: $dark-blue;
-    font-size: 20pt;
-    margin-bottom: 10px;
-  }
+function MainContainerContent(props: { title: string; children: ReactElement; }) {
+  return (
+    <div className='main-container-content mb-6'>
+      <h1>{props.title}</h1>
+      {props.children}
+    </div>
+  );
 }
+
+export default MainContainerContent;

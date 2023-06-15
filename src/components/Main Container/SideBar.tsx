@@ -26,7 +26,7 @@ export type SideBarItem = {
 };
 
 import SBI from './SideBarItem';
-import '../css/SideBar.scss';
+import '../../css/SideBar.scss';
 import { nanoid } from 'nanoid';
 
 function SideBar({ items }: { items: SideBarItem[] | SideBarItem; }) {

@@ -13,23 +13,24 @@
  * either express or implied limitations under the License.
  */
 import { ChangeEventHandler } from 'react';
+import { nanoid } from 'nanoid/non-secure';
 import '../../css/Input.scss';
 
 function InputCheckbox(props: {
   name: string;
   title: string;
-  center?: boolean;
   onChange: ChangeEventHandler;
   className?: string;
   defaultValue?: boolean;
-  inline?: boolean; // Whether to display this element as a block level element or inline (default is inline)
   checked?: boolean;
   disabled?: boolean;
 }) {
-  const classes = 'input input-checkbox' + (props.center ? ' center ' : ' ') + (!props.inline ? 'block' : '') + ' ' + props.className;
+  const classes = 'input input-checkbox ' + (props.className ?? '');
+  const id = nanoid(4);
   return (
     <div className={classes}>
       <input
+        id={id}
         type='checkbox'
         name={props.name}
         onChange={props.onChange}
@@ -37,7 +38,7 @@ function InputCheckbox(props: {
         checked={props.checked}
         disabled={props.disabled}
       />
-      <label>{props.title}</label>
+      <label htmlFor={id}>{props.title}</label>
     </div>
   );
 }

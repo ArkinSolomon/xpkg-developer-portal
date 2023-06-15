@@ -42,9 +42,8 @@ type LoginValues = {
 import { Component } from 'react';
 import { Formik, FormikErrors } from 'formik';
 import AuthBox from '../components/AuthBox';
-import InputField from '../components/Input/InputField';
+import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/AuthBox.scss';
-import '../css/AuthMenus.scss';
 import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
@@ -135,19 +134,15 @@ class Login extends Component {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
           const errorMessageActive = (this.state as LoginState).errorMessage !== '';
 
-          const emailFieldData = {
+          const emailFieldData: InputFieldProps = {
             name: 'email',
-            title: 'Email',
-            center: true,
-            width: '80%',
+            label: 'Email',
             onChange: handleChange
           };
 
-          const passwordFieldData = {
+          const passwordFieldData: InputFieldProps = {
             name: 'password',
-            title: 'Password',
-            center: true,
-            width: '80%',
+            label: 'Password',
             type: 'password',
             onChange: handleChange
           };
@@ -170,7 +165,6 @@ class Login extends Component {
               <Checkbox
                 name='rememberMe'
                 title='Remember Me'
-                center={true}
                 onChange={handleChange} />
               <div className="help-links">
                 <a href="/create" className={linkDisabled}>Create account</a>

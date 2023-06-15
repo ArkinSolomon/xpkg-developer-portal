@@ -72,13 +72,13 @@ import 'reactjs-popup/dist/index.css';
 import * as tokenStorage from '../scripts/tokenStorage';
 import { httpRequest } from '../scripts/http';
 import * as util from '../scripts/validators';
-import MainContainerRight from '../components/Main Container/MainContainerRight';
+import MainContainerContent from '../components/Main Container/MainContainerContent';
 import InputField from '../components/Input/InputField';
 import { Formik, FormikErrors } from 'formik';
-import * as SB from '../components/SideBar';
+import * as SB from '../components/Main Container/SideBar';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import HTTPMethod from 'http-method-enum';
-import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
+import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 const { default: SideBar } = SB;
 
 class Account extends Component {
@@ -152,7 +152,7 @@ class Account extends Component {
 
   loading(): ReactElement {
     return (
-      <MainContainerRightLoading loadingMessage='Loading account details' />
+      <MainContainerLoading loadingMessage='Loading account details' />
     );
   }
 
@@ -193,7 +193,7 @@ class Account extends Component {
       verificationButtonText = 'Verification sent';
 
     return (
-      <MainContainerRight title="Basic Information">
+      <MainContainerContent title="Basic Information">
         <div className='account-page'>
           <Formik
             validate={this.validateNameChange}
@@ -354,7 +354,7 @@ class Account extends Component {
             }}>{verificationButtonText}</button>
           </div>
         </div>
-      </MainContainerRight>
+      </MainContainerContent>
     );
   }
 

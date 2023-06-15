@@ -40,10 +40,10 @@ type VerifyProps = {
 import { Component, ReactNode } from 'react';
 import MainContainer from '../components/Main Container/MainContainer';
 import { checkAuth } from '../scripts/tokenStorage';
-import MainContainerRightLoading from '../components/Main Container/MainContainerRightLoading';
+import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 import { httpRequest } from '../scripts/http';
 import HTTPMethod from 'http-method-enum';
-import MainContainerRightError from '../components/Main Container/MainContainerRightError';
+import MainContainerError from '../components/Main Container/MainContainerError';
 import { useParams } from 'react-router-dom';
 
 class Verify extends Component {
@@ -132,11 +132,11 @@ class Verify extends Component {
         }
         {
           !this.state.doneLoading && 
-          <MainContainerRightLoading loadingMessage='Verifying your account' />
+          <MainContainerLoading loadingMessage='Verifying your account' />
         }
         {
           this.state.errorMessage &&
-          <MainContainerRightError message={this.state.errorMessage} linkName='Home' link='/packages'/>
+          <MainContainerError message={this.state.errorMessage} linkName='Home' link='/packages'/>
         }
       </MainContainer>
     );

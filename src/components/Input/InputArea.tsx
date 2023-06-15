@@ -18,7 +18,8 @@
  * 
  * @typedef {Object} InputAreaProps
  * @property {string} name The name of the component.
- * @property {string} title The title and placeholder of the component.
+ * @property {string} label The label to go above the description.
+ * @property {string} [placeholder] The placeholder of the text area. The label is used if no placeholder is provided.
  * @property {number} [maxLength] The maximum length of the value of the text area.
  * @property {number} [minLength] The minimum length of the value of the text area.
  * @property {ChangeEventHandler} [onChange] The function to run on the change of the text area.
@@ -27,7 +28,8 @@
  */
 export type InputAreaProps = {
   name: string;
-  title: string;
+  label: string;
+  placeholder?: string;
   maxLength?: number;
   minLength?: number;
   onChange?: ChangeEventHandler;
@@ -102,13 +104,13 @@ class InputArea extends Component {
 
     return (
       <div className={'input input-area ' + (props.error ? 'error-outline' : '')}>
-        <label htmlFor={props.name}>{props.title}</label>
+        <label htmlFor={this._id}>{props.label}</label>
         <textarea
           id={this._id}
           defaultValue={props.defaultValue}
           className='input-area-element'
           name={props.name}
-          placeholder={props.title}
+          placeholder={props.placeholder ?? props.label}
           onChange={props.onChange}
         />
         {props.error && 

@@ -29,20 +29,20 @@ function MainContainer(props: { right?: Elements; left?: Elements; children?: El
   
   if (left && right)
     return (
-      <div id='main-container'>
-        <div id='left'>
+      <main id='main-container'>
+        <div id='main-container-left'>
           {left}
         </div>
-        <div id="right">
+        <div id='main-container-right'>
           {right}
         </div>
-      </div>
+      </main>
     );
   else
     return (
-      <div id='main-container'>
+      <main id='main-container'>
         {children}
-      </div>
+      </main>
     );
 }
 

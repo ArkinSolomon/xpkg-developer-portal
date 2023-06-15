@@ -47,6 +47,7 @@ export type ConfirmPopupConfig = {
 import { ReactElement, ReactNode } from 'react';
 import Popup from 'reactjs-popup';
 import '../css/Popup.scss';
+import '../css/Buttons.scss';
 
 function ConfirmPopup(props: ConfirmPopupConfig & { open: boolean; }) {
 
@@ -93,12 +94,12 @@ function ConfirmPopup(props: ConfirmPopupConfig & { open: boolean; }) {
           <div className='buttons'>
             {
               (props.confirmText || props.onConfirm) &&
-                <button className='confirm-button' onClick={confirmButtonClicked}> 
+                <button className='primary-button mx-4' onClick={confirmButtonClicked}> 
                   {props.confirmText ?? 'Confirm'}
                 </button>
             }
             {showClose &&
-                <button className='close-button' onClick={closeButtonClicked}>
+                <button className='secondary-button' onClick={closeButtonClicked}>
                   {props.closeText ?? 'Close'}
                 </button>
             }

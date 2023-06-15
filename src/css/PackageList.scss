@@ -13,11 +13,13 @@
  * either express or implied limitations under the License.
  */
 .package-list-row {
-  margin-top: 10px;
+  margin-top: 17px;
 
-  .package-list-input-wrapper {
-    width: 50%;
-    display: inline-block;
+  display: flex;
+  justify-content: space-between;
+
+  .input {
+    width: 45%;
   }
 
   &:first-of-type {

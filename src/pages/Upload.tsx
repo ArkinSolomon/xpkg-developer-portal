@@ -1,182 +1,212 @@
 /*
- * Copyright (c) 2022-2023. Arkin Solomon.
+ * Copyright (c) 2023. Arkin Solomon.
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
  *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an "AS IS" BASIS,
+ * software distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
 
 /**
- * Values for the upload form.
+ * The fields required to submit to the server to upload.
  * 
  * @typedef {Object} UploadValues
- * @property {string} packageName The name of the package.
- * @property {string} packageId The identifier of the package.
- * @property {string} packageType The type of the package.
- * @property {string} description The description of the package.
- * @property {string} xplaneVersion The X-Plane compatibility version.
- * @property {boolean} isPublic True if the package is public.
- * @property {boolean} isPrivate True if the package is private.
- * @property {boolean} isStored True if the package is stored in the registry. 
+ * @property {string} packageId The id of the package that is getting a new version.
+ * @property {string} packageVersion The version of the package that is being uploaded.
+ * @property {string} xplaneSelection The selection of X-Plane versions.
+ * @property {boolean} isPublic True if this version is public.
+ * @property {boolean} isPrivate True if this version is private
+ * @property {boolean} isStored True if this version is stored.
  */
 type UploadValues = {
-  packageName: string;
   packageId: string;
-  packageType: string;
-  description: string;
-  initialVersion: string;
-  xplaneVersion: string;
+  packageVersion: string;
+  xplaneSelection: string;
   isPublic: boolean;
   isPrivate: boolean;
   isStored: boolean;
-};
+}
 
 /**
- * The state of the upload page
+ * The state of the upload object.
  * 
  * @typedef {Object} UploadState
- * @property {Object} errors The errors for each field, the same items in {@linkcode UploadValues}, but with all keys optional.
- * @property {string} [uploadError] Any error that occured after pressing the upload button.
- * @property {boolean} uploading True if the package is currently being uploaded to the server.
- * @property {number} uploadProgress The progress of the upload, 0 is 0%, 1 is 100%.
- * @property {File} [file] The file to upload to the server.
+ * @property {boolean} isLoading True if the page is fetching data from the server.
+ * @property {string} [errorMessage] The message to display in an error, undefined if no error exists. 
+ * @property {PackageData} [packageData] The data of the package that this page is uploading for.
+ * @property {boolean} isUploading True if we are currently uploading data to the server, and if the loading bar popup should be up.
+ * @property {number} uploadProgress The progress of the upload, a number from 0 to 1, where 0 is 0% and 1 is 100%.
+ * @property {string} [uploadError] Any error that was returned from the server during upload (human-readable).
+ * @property {Partial<UploadValues>} errors Any errors with the form.
  * @property {JSX.Element} dependencyList The dependency list rendered. 
  * @property {JSX.Element} incompatibilityList The incompatibility list rendered.
  */
 type UploadState = {
-  errors: Partial<UploadValues>;
-  uploadError?: string;
-  uploading: boolean;
+  isLoading: boolean;
+  errorMessage?: string;
+  packageData?: PackageData;
+  isUploading: boolean;
   uploadProgress: number;
+  uploadError?: string;
+  errors: Partial<UploadValues>;
   file?: File;
-  dependencyList: JSX.Element
+  dependencyList: JSX.Element;
   incompatibilityList: JSX.Element;
-};
+}
 
-import { Formik, FormikErrors } from 'formik';
-import { Component, ReactNode } from 'react';
-import InputDropdown from '../components/Input/InputDropdown';
-import InputField, { InputFieldProps } from '../components/Input/InputField';
-import MainContainer from '../components/Main Container/MainContainer';
-import MainContainerRight from '../components/Main Container/MainContainerRight';
-import ErrorMessage from '../components/ErrorMessage';
-import '../css/Upload.scss';
-import { checkAuth, delToken } from '../scripts/tokenStorage';
-import InputArea, { InputAreaProps } from '../components/Input/InputArea';
+import { Component } from 'react';
+import { httpRequest } from '../scripts/http';
+import * as tokenStorage from '../scripts/tokenStorage';
+import HTTPMethod from 'http-method-enum';
+import { PackageData, PackageType } from './Packages';
 import Version from '../scripts/version';
-import axios, { AxiosError } from 'axios';
+import Big from 'big.js';
+import LoadingBarPopup, { LoadingPopupConfig } from '../components/LoadingBarPopup';
+import MainContainer from '../components/Main Container/MainContainer';
+import MainContainerError from '../components/Main Container/MainContainerError';
+import MainContainerLoading from '../components/Main Container/MainContainerLoading';
+import MainContainerContent from '../components/Main Container/MainContainerContent';
+import { Formik, FormikErrors } from 'formik';
+import ErrorMessage from '../components/ErrorMessage';
+import InputField, { InputFieldProps } from '../components/Input/InputField';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import InputCheckbox from '../components/Input/InputCheckbox';
 import PackageList, { PackageListProps } from '../components/PackageList';
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid/non-secure';
+import axios, { AxiosError } from 'axios';
 import SelectionChecker from '../scripts/selectionChecker';
-import { validateId } from '../scripts/validators';
-import LoadingBarPopup, { LoadingPopupConfig } from '../components/LoadingBarPopup';
-
-// Compute the default option
-const packageTypes = {
-  aircraft: 'Aircraft',
-  scenery: 'Scenery',
-  plugin: 'Plugin',
-  livery: 'Livery',
-  executable: 'Executable',
-  other: 'Other'
-};
-const defaultPackage = Object.entries(packageTypes).sort((a, b) => a[1].localeCompare(b[1]))[0][0];
+import PackageInfoFields from '../components/PackageInfoFields';
+import '../css/Upload.scss';
 
 class Upload extends Component {
-
+  
   state: UploadState;
 
+  private _packageId?: string;
+  private _defaultVersion = '1.0.0';
+
+  private _dependencies: [string, string][] = [];
+  private _incompatibilities: [string, string][] = [];
+
   private _isMounted = false;
-  private _dependencies: [string, string][];
-  private _incompatibilities: [string, string][];
 
   constructor(props: Record<string, never>) {
     super(props);
 
-    this._dependencies = [];
-    this._incompatibilities = [];
-
     const lists = this._genLists();
-
-    this.validate = this.validate.bind(this);
     this.state = {
-      errors: {},
-      uploading: false,
+      isLoading: true,
+      isUploading: false,
       uploadProgress: 0,
+      errors: {},
       ...lists
-    };
-  }
+    };    
+
+    const token = tokenStorage.checkAuth();
+    if (!token) {
+      sessionStorage.setItem('post-auth-redirect', '/packages');
+      window.location.href = '/';
+      return;
+    }   
+  } 
 
   componentDidMount(): void {
     this._isMounted = true;
-  }
+    const searchParams = new URLSearchParams(window.location.search);
 
-  validate({ packageName, packageId, description, initialVersion, xplaneVersion }: UploadValues): FormikErrors<UploadValues> {
-    packageId = packageId.trim().toLowerCase();
-    packageName = packageName.trim();
-    description = description.trim();
-    initialVersion = initialVersion.trim().toLowerCase();
-    
-    const errors = {} as UploadState['errors'];
+    if (!searchParams.has('packageId')) {
+      this.setState({
+        isLoading: false,
+        errorMessage: 'No package identifier'
+      } as Partial<UploadState>);
+      return;
+    }
 
-    if (packageId.length < 6)
-      errors.packageId = 'Package identifier too short';
-    else if (packageId.length > 32)
-      errors.packageId = 'Package identifier too short';
-    else if (!validateId(packageId)) 
-      errors.packageId = 'Package identifier has invalid characters';
+    this._packageId = decodeURIComponent(searchParams.get('packageId') as string).trim().toLowerCase();
+
+    const token = tokenStorage.checkAuth() as string;
+
+    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+      if (err)
+        return this.setState({
+          errorMessage: 'An unknown error occured'
+        } as Partial<UploadState>);
       
-    if (packageName.length < 3)
-      errors.packageName = 'Package name too short';
-    else if (packageName.length > 32)
-      errors.packageName = 'Package name too long';
-    
-    if (description.length < 10)
-      errors.description = 'Description too short';
-    else if (description.length > 8192)
-      errors.description = 'Description too long';
-    
-    if (initialVersion.length < 1)
-      errors.initialVersion = 'Version string required';
-    else if (initialVersion.length > 15)
-      errors.initialVersion = 'Version string too long';
-    else if (!Version.fromString(initialVersion))
-      errors.initialVersion = 'Invalid version string';
-    
-    if (xplaneVersion.length < 1)
-      errors.xplaneVersion = 'X-Plane version selection required';
-    else if (xplaneVersion.length > 256)
-      errors.xplaneVersion = 'X-Plane version selection too long';
-    else if (!new SelectionChecker(xplaneVersion).isValid)
-      errors.xplaneVersion = 'X-Plane version selection invalid';
-    
-    this.setState({
-      errors,
-      uploadError: '',
-    } as UploadState);
-    return {};
+      if (res?.status !== 200) {
+
+        if (res?.status === 401) {
+          tokenStorage.delToken();
+          sessionStorage.setItem('post-auth-redirect', '/packages');
+          window.location.href = '/';
+          return;
+        }
+
+        return this.setState({
+          isLoading: false,
+          errorMessage: 'An unknown error occured'
+        } as Partial<UploadState>);
+      }
+
+      const packageData = (JSON.parse(res.response) as PackageData[])
+        .find(pkg => pkg.packageId === this._packageId);
+      
+      if (!packageData) {
+        this.setState({
+          errorMessage: 'Package does not exist',
+          isLoading: false
+        });
+        return;
+      }
+      
+      packageData.versions.sort((a, b) => {
+        const aVer = Version.fromString(a.version);
+        const bVer = Version.fromString(b.version);
+
+        return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+      });
+
+      // Increment the last version as the default version
+      if (packageData.versions.length) {
+        const lastVersionStr = packageData.versions[0].version;
+        const lastVersion = Version.fromString(lastVersionStr) as Version;
+
+        if (lastVersion.isPreRelease) {
+          const preReleaseNum = lastVersion.preReleaseNum;
+          if (typeof preReleaseNum === 'number' && preReleaseNum !== 999)
+            lastVersion.preReleaseNum = preReleaseNum + 1;
+        } else {
+          const patchNum = lastVersion.patch;
+          if (patchNum !== 999)
+            lastVersion.patch = patchNum + 1;
+        }
+
+        this._defaultVersion = lastVersion.toString();
+      }
+      
+      this.setState({
+        errorMessage: void (0),
+        isLoading: false,
+        packageData
+      } as Partial<UploadState>);
+    });
   }
 
-  private _genLists(): Pick<UploadState, 'dependencyList'  | 'incompatibilityList'> {
+  private _genLists(): Pick<UploadState, 'dependencyList' | 'incompatibilityList'> {
 
     const dependencyListProps: PackageListProps = {
-      initialValues: this._dependencies,
+      initialValues:  this._dependencies,
       onChange: (i, packageId, versionSelection) => {
         this._dependencies[i] = [packageId, versionSelection];
       }
     };
-
     const incompatibilityListProps: PackageListProps = {
-      initialValues: this._incompatibilities,
+      initialValues:  this._incompatibilities,
       onChange: (i, packageId, versionSelection) => {
         this._incompatibilities[i] = [packageId, versionSelection];
       }
@@ -187,199 +217,169 @@ class Upload extends Component {
       dependencyList: <PackageList {...dependencyListProps} key={nanoid(5)} />,
       incompatibilityList: <PackageList {...incompatibilityListProps} key={nanoid(5)} />
     };
+
     if (this._isMounted) 
       this.setState(newValues as Partial<UploadState>);
+    
     return newValues;
   }
 
-  render(): ReactNode {
-    const loadingPopupConfig: LoadingPopupConfig = {
-      open: this.state.uploading,
+  private _validate({ packageVersion, xplaneSelection }: UploadValues): FormikErrors<UploadValues> {
+    packageVersion = packageVersion.trim();
+    xplaneSelection = xplaneSelection.trim();
+
+    const errors: Partial<UploadValues> = {};
+
+    if (packageVersion.length < 1)
+      errors.packageVersion = 'Version string required';
+    else if (packageVersion.length > 15)
+      errors.packageVersion = 'Version string too long';
+    else if (!Version.fromString(packageVersion))
+      errors.packageVersion = 'Invalid version string';
+    
+    const selectionChecker = new SelectionChecker(xplaneSelection);
+    if (xplaneSelection.length < 1)
+      errors.xplaneSelection = 'X-Plane version required';
+    else if (xplaneSelection.length > 256)
+      errors.xplaneSelection = 'X-Plane version too long';
+    else if (!selectionChecker.isValid)
+      errors.xplaneSelection = 'Version selection invalid';
+    
+    this.setState({
+      errors
+    } as Partial<UploadState>);
+
+    return {};
+  }
+
+  private async _submit(values: UploadValues, { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void; }): Promise<void> {
+    this.setState({
+      isUploading: true,
+      uploadProgress: 0
+    } as Partial<UploadState>);
+    setSubmitting(true);
+                
+    const packageVersion = values.packageVersion.trim().toLowerCase(); 
+    const xplaneSelection = values.xplaneSelection.trim().toLowerCase();
+    const { isPublic, isPrivate, isStored } = values;
+
+    const formData = new FormData();
+    formData.append('packageId', this.state.packageData?.packageId as string);
+    formData.append('packageVersion', packageVersion);
+    formData.append('xplaneSelection', xplaneSelection);
+    formData.append('isPublic', isPublic ? 'true' : 'false');
+    formData.append('isPrivate', isPrivate ? 'true' : 'false');
+    formData.append('isStored', isStored ? 'true' : 'false');
+    formData.append('dependencies', JSON.stringify(this._dependencies));
+    formData.append('incompatibilities', JSON.stringify(this._incompatibilities));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    formData.append('file', (document.getElementById('package-file') as any).files[0]);
+    try {
+      await axios({
+        url: 'http://localhost:5020/packages/upload',
+        method: HTTPMethod.POST,
+        data: formData,
+        headers: {
+          Authorization: tokenStorage.checkAuth() as string
+        }, 
+        onUploadProgress: e  => {
+          this.setState({
+            uploadProgress: e.progress
+          } as Partial<UploadState>);
+        },
+      });
+
+      sessionStorage.setItem('success_message', 'Uploaded new package version successfully');
+      window.location.href = '/packages';
+    } catch (e) {
+      let errorMessage = 'An unknown error occured.';
+      
+      if (e instanceof AxiosError) {
+        switch (e.response?.status) {
+        case 400:
+          errorMessage = {
+            missing_form_data: 'Missing form data.',
+            no_version: 'A version must be provided.',
+            long_version: 'The version provided is too long.',
+            invalid_version: 'The version provided is invalid',
+            version_exists: 'The version provided already exists.'
+          }[e.response?.data as string]
+              ?? `An unknown error occured [${e.response?.data}].`;
+          break;
+        case 403:
+          errorMessage = `You do not own the package ${this.state.packageData?.packageId as string}.`;
+          break;
+        case 500:
+          errorMessage = 'An internal server error occured.';
+          break;
+        }
+      }
+
+      this.setState({
+        uploadError: errorMessage,
+        isUploading: false
+      } as Partial<UploadState>);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  render(): JSX.Element {
+    const loadingBarProps: LoadingPopupConfig =  {
+      open: this.state.isUploading,
       progress: this.state.uploadProgress,
       title: 'Uploading',
-      text: this.state.uploadProgress < 1 ? `Uploading -- ${Math.round(this.state.uploadProgress * 100)}%` : 'Waiting for checks'
+      text: this.state.uploadProgress < 1 ? `Uploading -- ${Math.round(this.state.uploadProgress * 100)}%` : 'Waiting for Upload Confirmation...'
     };
 
     return (
       <>
-        <LoadingBarPopup {...loadingPopupConfig} />
+        <LoadingBarPopup {...loadingBarProps} />
         <MainContainer>
-          <MainContainerRight title='Upload'>
-            <>
+          {this.state.errorMessage && <MainContainerError
+            message={this.state.errorMessage}
+            linkName='Return Home'
+            link='/packages'
+          />}
+          {this.state.isLoading && <MainContainerLoading loadingMessage='Loading data from registry' />}
+          {(!this.state.errorMessage && !this.state.isLoading) &&
+            <MainContainerContent title='Upload a new version'>
               <Formik
-                validate={this.validate}
+                validate={this._validate.bind(this)}
                 validateOnChange={true}
                 validateOnMount={true}
                 initialValues={{
-                  packageName: '',
-                  packageId: '',
-                  packageType: '',
-                  description: '',
-                  initialVersion: '1.0.0',
-                  xplaneVersion: '',
+                  packageId: this.state.packageData?.packageId,
+                  packageVersion: this._defaultVersion,
+                  xplaneSelection: '',
                   isPublic: true,
                   isPrivate: false,
-                  isStored: true,
-                  file: void(0)
+                  isStored: true
                 } as UploadValues}
-                onSubmit={
-                  async (values, { setSubmitting }) => {
-                    setSubmitting(true);
-
-                    this.setState({
-                      uploadProgress: 0,
-                      uploading: true
-                    } as Partial<UploadState>);
-                
-                    const packageId = values.packageId.trim().toLowerCase();
-                    const packageName = values.packageName.trim();
-                    const packageType = (values.packageType || defaultPackage).trim().toLowerCase();
-                    const description = values.description.trim();
-                    const initialVersion = values.initialVersion.trim().toLowerCase(); 
-                    const xplaneVersion = values.xplaneVersion.trim().toLowerCase();
-                    const { isPublic, isPrivate, isStored } = values;
-
-                    const formData = new FormData();
-                    formData.append('packageId', packageId);
-                    formData.append('packageName', packageName);
-                    formData.append('packageType', packageType);
-                    formData.append('description', description);
-                    formData.append('initialVersion', initialVersion);
-                    formData.append('xplaneVersion', xplaneVersion);
-                    formData.append('isPublic', isPublic ? 'true' : 'false');
-                    formData.append('isPrivate', isPrivate ? 'true' : 'false');
-                    formData.append('isStored', isStored ? 'true' : 'false');
-                    formData.append('dependencies', JSON.stringify(this._dependencies));
-                    formData.append('incompatibilities', JSON.stringify(this._incompatibilities));
-                  
-                    // Types are broken for FormData
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    formData.append('file', (document.getElementById('package-file') as any).files[0]);
-
-                    try {
-                      await axios({
-                        url: 'http://localhost:5020/packages/new',
-                        method: 'POST',
-                        data: formData,
-                        headers: {
-                          Authorization: checkAuth() as string
-                        },
-                        onUploadProgress: ({progress}) => {
-                          console.log(progress);
-                          this.setState({
-                            uploadProgress: progress
-                          } as Partial<UploadState>);
-                        },
-                      });
-                      window.location.href = '/packages?s=' + encodeURIComponent(btoa('Your package is being processed'));
-                    } catch (e){
-                      if (!(e instanceof AxiosError)) {
-                        this.setState({
-                          uploadError: 'An unkown error occured'
-                        });
-                      } else {
-                        switch (e.response?.status) {
-                        case 400:
-                          this.setState({
-                            uploadError: {
-                              missing_form_data: 'missing form data.',
-                              short_id: 'package identifier is too short',
-                              long_id: 'package identifier is too long',
-                              invalid_id: 'package identifier uses invalid characters',
-                              short_name: 'package name is too short',
-                              long_name: 'package name is too long',
-                              short_desc: 'description is too short',
-                              long_desc: 'description is too long',
-                              profane_id: 'do not use profanity in package identifier (contact support if you believe this is in error)',
-                              profane_name: 'do not use profanity in package name (contact support if you believe this is in error)',
-                              profane_desc: 'do not use profanity in description (contact support if you believe this is in error)',
-                              id_in_use: 'package identifier already in use',
-                              name_in_use: 'package name already in use'
-                            }[e.response?.data as string]
-                              ?? ('unkown issue with form: ' + e.response?.data as string),
-                            uploading: false
-                          } as Partial<UploadState>);
-                          break;
-                        case 401:
-                          window.location.href = '/';
-                          delToken();
-                          break;
-                        case 500:
-                          this.setState({
-                            uploadError: 'Internal server error, try again',
-                            uploading: false
-                          } as UploadState);
-                          break;
-                        default:
-                          this.setState({
-                            uploadError: 'An unknown error occured',
-                            uploading: false
-                          } as Partial<UploadState>);
-                        }
-                      }
-
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }
-                }>
+                onSubmit={ this._submit.bind(this) }>
                 {({
+                  values,
                   handleChange,
                   handleSubmit,
-                  values,
                   isSubmitting,
                   setFieldValue
                 }) => {
-
-                  // We need this due to TypeScript being weird
-                  // https://stackoverflow.com/questions/48240449/type-is-not-assignable-to-type-intrinsicattributes-intrinsicclassattribu
-                  const packageNameData: InputFieldProps = {
-                    classes: ['package-upload-input'],
-                    name: 'packageName',
-                    title: 'Package Name',
-                    width: '35%',
-                    minLength: 3,
-                    maxLength: 32,
-                    onChange: handleChange,
-                    error: this.state.errors.packageName
-                  };
-
-                  const packageIdData: InputFieldProps = {
-                    classes: ['package-upload-input'],
-                    name: 'packageId',
-                    title: 'Package Identifier',
-                    minLength: 6,
-                    maxLength: 32,
-                    width: '35%',
-                    onChange: handleChange,
-                    error: this.state.errors.packageId
-                  };
-              
-                  const descTextAreaData: InputAreaProps = {
-                    name: 'description',
-                    title: 'Description',
-                    minLength: 10,
-                    maxLength: 8192,
-                    onChange: handleChange,
-                    error: this.state.errors.description
-                  };
-
-                  const initialVersionField: InputFieldProps = {
-                    name: 'initialVersion',
-                    title: 'Initial Version',
+                  const parsedVersion = Version.fromString(values.packageVersion);
+                  const packageVersionProps: InputFieldProps = {
+                    name: 'packageVersion',
+                    label: parsedVersion ? `Package Version (${parsedVersion.toString()})`: 'Package Version',
                     placeholder: 'x.x.x',
+                    defaultValue: this._defaultVersion,
                     minLength: 1,
                     maxLength: 15,
-                    width: '66%',
-                    defaultValue: '1.0.0',
-                    error: this.state.errors.initialVersion
+                    error: this.state.errors.packageVersion,
                   };
 
-                  const inputFileProps: InputFileProps = {
-                    id: 'package-file',
-                    classes: ['float-right'],
+                  const fileUploadProps: InputFileProps = {
                     label: 'Files',
-                    name: 'file',
+                    id: 'package-file',
+                    name: 'package-file',
                     types: '.zip',
                     onChange: e => {
                       if (!e.target.files?.length)
@@ -391,28 +391,27 @@ class Upload extends Component {
                   };
 
                   const xpCompatiblityFieldProps: InputFieldProps = {
-                    title: 'X-Plane Compatiblity',
+                    label: 'X-Plane Compatiblity',
                     placeholder: 'x.x.x-x.x.x',
-                    name: 'xplaneVersion',
+                    name: 'xplaneSelection',
                     minLength: 1,
                     maxLength: 256,
-                    width: '88%',
-                    error: this.state.errors.xplaneVersion
+                    error: this.state.errors.xplaneSelection
                   };
 
-                  // Use `values` for previous state, and parameters for current state
+                  // Make sure access config is valid once a checkbox is updated
                   const checkboxUpdated = ({ isPublic, isPrivate }: UploadValues) => {
                     if (!values.isPrivate && isPrivate)
                       setFieldValue('isPublic', false, false);
-                  
+                
                     if (!values.isPublic && isPublic) {
                       setFieldValue('isPrivate', false, false);
                       setFieldValue('isStored', true, false);
                     }
-                  
+                
                     if (values.isPublic && !isPublic)
                       setFieldValue('isPrivate', true, false);
-                  
+                
                     if (values.isPrivate && !isPrivate) {
                       setFieldValue('isStored', true, false);
                       setFieldValue('isPublic', true, false);
@@ -423,57 +422,59 @@ class Upload extends Component {
                   return (
                     <>
                       <ErrorMessage text={this.state.uploadError ?? ''} show={!!this.state.uploadError} />
-                      <form onSubmit={handleSubmit} onChange={handleChange}>
-                        <div className='upload-input-section'>
-                          <InputField {...packageNameData}/>
-                          <InputField {...packageIdData} />
-                          <InputDropdown
-                            classes={['package-upload-input', 'right']}
-                            name='packageType'
-                            label='Package Type'
-                            items={packageTypes}
-                            onChange={handleChange}
-                          />
-                        </div>
-                        <div className='upload-input-section mt-9 bottom-margin'>
-                          <InputArea {...descTextAreaData} />
-                        </div>
-                        <div className='upload-input-section mt-9'>
-                          <h2>Initial Package Version</h2>
-                          <div className='left-third'>
-                            <InputField {...initialVersionField} />
-                          </div>
-                          <div className='middle-third'>
-                            <label className='access-config-label'>Access Config</label>
-                            <InputCheckbox className='ml-4' inline name="isPublic" title="Public" onChange={e => {
-                              v.isPublic = !v.isPublic;
-                              handleChange(e);
-                              checkboxUpdated(v);
-                            }} checked={values.isPublic} /> 
-                            <InputCheckbox className='ml-4' inline name="isPrivate" title="Private" onChange={e => {
-                              v.isPrivate = !v.isPrivate;
-                              handleChange(e);
-                              checkboxUpdated(v);
-                            }} checked={values.isPrivate} /> 
-                            <InputCheckbox className='ml-4' inline name="isStored" title="Is Saved" onChange={e => {
-                              v.isStored = !v.isStored;
-                              handleChange(e);
-                              checkboxUpdated(v);
-                            }} checked={values.isStored} disabled={values.isPublic} /> 
-                          </div>
-                          <div className='right-third'>
-                            <InputFile {...inputFileProps}></InputFile>
-                          </div>
-                        </div>
+                      <form
+                        onSubmit={handleSubmit}
+                        onChange={handleChange}
+                        onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
+                      >
+                        <PackageInfoFields
+                          packageId={this.state.packageData?.packageId as string}
+                          packageName={this.state.packageData?.packageName as string}
+                          packageType={this.state.packageData?.packageType as PackageType}
+                        />
 
-                        <div className='upload-input-section mt-9'>
-                          <div className='left-third'>
+                        <section className='mt-9'>
+
+                          <div className='left-half no-border'>
+                            <InputField {...packageVersionProps} />
+                          </div>
+
+                          <div className='right-half'>
+                            <InputFile {...fileUploadProps} /> 
+                          </div>
+
+                        </section>
+                        <section className='mt-9'>
+                          
+                          <div className='left-half no-border'>
                             <InputField {...xpCompatiblityFieldProps} />
+                          </div>
+
+                          <div className='right-half access-config'>
+                            <label className='access-config-label'>Access Configuration</label>
+                            <div className="checkboxes">
+                              <InputCheckbox name='isPublic' title='Public' onChange={e => {
+                                v.isPublic = !v.isPublic;
+                                handleChange(e);
+                                checkboxUpdated(v);
+                              }} checked={values.isPublic} />
+                              <InputCheckbox name='isPrivate' title='Private' onChange={e => {
+                                v.isPrivate = !v.isPrivate;
+                                handleChange(e);
+                                checkboxUpdated(v);
+                              }} checked={values.isPrivate} />
+                              <InputCheckbox name='isStored' title='Is Saved' onChange={e => {
+                                v.isStored = !v.isStored;
+                                handleChange(e);
+                                checkboxUpdated(v);
+                              }} checked={values.isStored} disabled={values.isPublic} />
+                            </div>
                           </div>  
-                          {/* We don't need the right half */}
-                        </div>
-                        <div className='upload-input-section flex-section mt-9'>
-                          <div className='left-half right-border'>
+                        </section>
+
+                        <section className='mt-11 top-border'>
+                          
+                          <div className='left-half'>
                             <p>Dependencies</p>
                             <div className='package-list'>
                               {this._dependencies.length === 0 && <p className='package-list-empty'>No dependencies</p>}
@@ -481,6 +482,7 @@ class Upload extends Component {
                             </div>
                             <div className='package-list-buttons'>
                               <button
+                                type='button'
                                 className='list-mod-button left'
                                 onClick={() => {
                                   this._dependencies.push(['', '']);
@@ -488,15 +490,18 @@ class Upload extends Component {
                                 }}
                               >Add</button>
                               <button
+                                type='button'
                                 className='list-mod-button right'
                                 onClick={() => {
                                   this._dependencies.pop();
                                   this._genLists();
                                 }}
+                                disabled={!this._dependencies.length}
                               >Remove</button>
                             </div>
                           </div>
-                          <div className='right-half other-borders'>
+                          
+                          <div className='right-half'>
                             <p>Incompatibilities</p>
                             <div className='package-list'>
                               {this._incompatibilities.length === 0 && <p className='package-list-empty'>No incompatibilities</p>}
@@ -504,6 +509,7 @@ class Upload extends Component {
                             </div>
                             <div className='package-list-buttons'>
                               <button
+                                type='button'
                                 className='list-mod-button left'
                                 onClick={() => {
                                   this._incompatibilities.push(['', '']);
@@ -511,33 +517,37 @@ class Upload extends Component {
                                 }}
                               >Add</button>
                               <button
+                                type='button'
                                 className='list-mod-button right'
                                 onClick={() => {
                                   this._incompatibilities.pop();
                                   this._genLists();
                                 }}
+                                disabled={!this._incompatibilities.length}
                               >Remove</button>
                             </div>
                           </div>
-                        </div>
-                        <div className='upload-input-section relative mt-9'>
+
+                        </section>
+                        <section className='relative mt-9'>
                           <input
-                            type="submit"
-                            value="Upload"
+                            className='primary-button float-right'
+                            type='submit'
+                            value='Upload'
                             disabled={isSubmitting || !!Object.keys(this.state.errors).length || !!this.state.uploadError || !this.state.file}
                           />
-                        </div>
+                        </section>
                       </form>
                     </>
                   );  
                 }}
               </Formik>
-            </>
-          </MainContainerRight>
+            </MainContainerContent>
+          }
         </MainContainer>
       </>
     );
-  }
+  } 
 }
 
 export default Upload;

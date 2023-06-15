@@ -16,15 +16,6 @@
 @import "_fonts.scss";
 @import "_colors.scss";
 
-.upload-button {
-  @include primary-button;
-
-  span {
-    line-height: 14pt;
-    font-size: 24pt;
-  }
-}
-
 // The main package table
 table:first-of-type {
   margin-top: 20px;
@@ -32,6 +23,14 @@ table:first-of-type {
 
 .success-message {
   color: $good-green;
+}
+
+.error-message {
+  color: $error-red;
+
+}
+
+.success-message, .error-message {
   display: block;
   padding-bottom: 10px;
 }

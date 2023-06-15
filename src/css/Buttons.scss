@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023. Arkin Solomon.
+ * Copyright (c) 2023. Arkin Solomon.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,16 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-import { ReactElement } from 'react';
-import '../../css/MainContainerRight.scss';
+@import '_mixins.scss';
+@import '_colors.scss';
+@import '_fonts.scss';
 
-function MainContainerRight(props: { title: string; children: ReactElement; }) {
-  return (
-    <div className="main-container-right">
-      <h1>{props.title}</h1>
-      {props.children}
-    </div>
-  );
+.primary-button {
+  @include primary-button;
 }
 
-export default MainContainerRight;
+.secondary-button {
+  @include secondary-button;
+}
+
+.primary-button,
+.secondary-button {
+  padding-top: 4px;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 4px;
+}

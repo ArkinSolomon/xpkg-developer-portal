@@ -21,26 +21,33 @@
  * @property {string} label The label for the field.
  * @property {Record<string, string>} items The items of the dropdown, where the key is the value of the field, and the value of the record is the display value.
  * @property {string[]} [classes] Additional classes for the dropdown wrapping div.
- * @property {boolean} [center] True if you want to center the item.
  * @property {ChangeEventHandler} [onChange] The function to call when the value is changed.
+ * @property {boolean} [readonly] True if the dropdown should be readonly, falsy if the dropdown can be changed.
+ * @property {[string, string]} [defaultValue] The default value to put in the dropdown.
  */
 export type InputDropdownProps = {
   name: string;
   label: string;
   items: Record<string, string>;
   classes?: string[];
-  center?: boolean;
   onChange?: ChangeEventHandler;
+  readonly?: boolean;
+  defaultValue?: string;
 };
 
 import { ChangeEventHandler, ReactElement } from 'react';
 import '../../css/Input.scss';
+import { nanoid } from 'nanoid/non-secure';
 
 function InputDropdown(props: InputDropdownProps): ReactElement {
   const items: ReactElement[] = [];
 
-  const propsClasses = props.classes && typeof props.classes === 'string' ? [props.classes] : props.classes as string[];
-  const classes = 'input input-dropdown' + (props.center ? ' center' : '') + ' ' + (propsClasses ?? []).join(' ');
+  const propsClasses = props.classes && typeof props.classes === 'string' ? [props.classes] : (props.classes as string[] || []);
+
+  if (props.readonly)
+    propsClasses.push('input-readonly');
+
+  const classes = 'input input-dropdown ' + (propsClasses ?? []).join(' ');
 
   let defaultValue;
   for (const [value, displayVal] of Object.entries(props.items).sort((a, b) => a[1].localeCompare(b[1]))) {
@@ -50,13 +57,21 @@ function InputDropdown(props: InputDropdownProps): ReactElement {
     items.push(<option value={value} key={value}>{displayVal}</option>);
   }
 
+  if (props.defaultValue)
+    defaultValue = props.defaultValue;
+
+  const id = nanoid(5);
+  
   return (
     <div className={classes}>
-      <label htmlFor={props.name}>{props.label}</label>
+      <label htmlFor={id}>{props.label}</label>
       <select
+        id={id}
         name={props.name}
         defaultValue={defaultValue}
-        onChange={props.onChange}>
+        onChange={props.onChange}
+        disabled={props.readonly}
+      >
         {items}
       </select>
     </div>
