@@ -13,18 +13,17 @@
  * either express or implied limitations under the License.
  */
 import MainContainer from '../components/Main Container/MainContainer';
-import '../css/NotFound.scss';
+import MainContainerError from '../components/Main Container/MainContainerError';
 
 function NotFound() {
   return (
     <MainContainer>
-      <div className='error-container'>
-        <div className='text-center'>
-          <h1>404</h1>
-          <p>Page not found, you may have followed a broken link.</p>
-          <button onClick={() => window.location.href = '/packages'}>Return Home</button>
-        </div>
-      </div>
+      <MainContainerError
+        message='404'
+        subtext='Page not found, you may have followed a broken link.'
+        link='/packages'
+        linkName='Return Home'
+      />
     </MainContainer>
   );
 }

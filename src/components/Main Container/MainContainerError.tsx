@@ -14,11 +14,11 @@
  */
 import '../../css/MainContainer.scss';
 
-function MainContainerError({ message, linkName, link }: { message: string; linkName?: string; link?: string; }) {
+function MainContainerError({ message, subtext, linkName, link }: { message: string; subtext?: string; linkName?: string; link?: string; }) {
   return (
     <div className='error-screen'>
-      <h2 className='text-[24pt] pt-7 mb-6'>There was an error</h2>
-      <p className='text-[15pt] mb-4'>{message}</p>
+      <h2 className='text-[24pt] pt-7 mb-6'>{subtext ? message : 'There was an error'}</h2>
+      <p className='text-[15pt] mb-4'>{subtext ?? message}</p>
       {
         link && 
           <button onClick={() => window.location.href = link}>{linkName || link}</button>

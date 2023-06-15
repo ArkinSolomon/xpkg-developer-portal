@@ -12,17 +12,77 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied limitations under the License.
  */
-.package-list-row {
-  margin-top: 17px;
+@import '_fonts.scss';
+@import '_mixins.scss';
+@import '_colors.scss';
 
+.package-list-row-wrapper {
   display: flex;
-  justify-content: space-between;
-
-  .input {
-    width: 45%;
-  }
+  width: 100%;
+  justify-content: space-around;
+  margin-top: 18px;
 
   &:first-of-type {
     margin-top: 0;
   }
+
+  .package-list-row {
+    width: 87%;
+    display: inline-block;
+
+    .input {
+      width: 47%;
+      float: left;
+
+      &:last-of-type {
+        float: right;
+      }
+    }
+  }
+
+  .button-wrapper {
+    height: 100%;
+
+    transform: translateY(10px);
+    justify-self: flex-end;
+
+    button {
+      @include primary-button;
+
+      vertical-align: middle;
+      width: 24px;
+      height: 24px;
+
+      span {
+        background-color: white;
+
+        width: 12px;
+        height: 2px;
+      }
+    }
+  }
+}
+
+.package-list-button {
+  display: block;
+  height: 24px;
+
+  button {
+    @include primary-button;
+
+    margin-top: 25px;
+    width: 90%;
+    height: 100%;
+    font-size: 14pt;
+
+    display: block;
+
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.package-list,
+.package-list-buttons {
+  display: block;
 }

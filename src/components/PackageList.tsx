@@ -121,11 +121,18 @@ class PackageList extends Component {
       const versionSelectField = versionSelectFields[i];
   
       rows.push(
-        <div className='package-list-row' key={nanoid(10)}>
-          <>
+        <div className='package-list-row-wrapper' key={nanoid(10)}>
+          <div className='package-list-row'>
             {packageIdField}
             {versionSelectField}
-          </>
+          </div>
+          <div className='button-wrapper'>
+            <button type='button' onClick={() => {
+              const props = (this.props as PackageListProps);
+              props.list.splice(~~i, 1);
+              this._onChangeCaller();
+            }}><span /></button>
+          </div>
         </div>
       );
     }
@@ -147,7 +154,7 @@ class PackageList extends Component {
           {list.length === 0 && <p className='package-list-empty'>{ noneText }</p>}
           {this._createList()}
         </div>
-        <div className='package-list-buttons'>
+        <div className='package-list-button'>
           <button
             type='button'
             className='list-mod-button left'
@@ -155,16 +162,7 @@ class PackageList extends Component {
               list.push(['', '']);  
               this._onChangeCaller();
             }}
-          >Add</button>
-          <button
-            type='button'
-            className='list-mod-button right'
-            onClick={() => {
-              list.pop();
-              this._onChangeCaller();
-            }}
-            disabled={!list.length}
-          >Remove</button>
+          >+</button>
         </div>
       </>
     );
