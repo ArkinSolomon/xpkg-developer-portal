@@ -32,15 +32,17 @@ type ModifyState = {
 import { Component, ReactNode } from 'react';
 import * as tokenStorage from '../scripts/tokenStorage';
 import Version from '../scripts/version';
-import { httpRequest } from '../scripts/http';
+import { downloadFile, httpRequest } from '../scripts/http';
 import HTTPMethod from 'http-method-enum';
-import { PackageData, PackageType, VersionData } from './Packages';
+import { PackageData, PackageType, VersionData, VersionStatus } from './Packages';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerContent from '../components/Main Container/MainContainerContent';
 import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 import MainContainerError from '../components/Main Container/MainContainerError';
 import PackageInfoFields from '../components/PackageInfoFields';
 import PackageList, { PackageListProps } from '../components/PackageList';
+import '../css/Modify.scss';
+import { getBestUnits } from '../scripts/displayUtil';
 
 class Modify extends Component {
   
@@ -187,17 +189,32 @@ class Modify extends Component {
                 packageType={this._packageData?.packageType as PackageType}
                 packageVersion={this._versionData.version}
               />
+              <section className='mt-7'>
+                <div id='version-meta'>
+                  <p>Installs: <b>{this._versionData.installs}</b></p>
+                  <p>Checksum: <b>{this._versionData.hash}</b></p>
+                  <p>Uploaded: <b>{this._versionData.uploadDate.toLocaleString()}</b></p>
+                  <p>Package Size: <b>{getBestUnits(this._versionData.size)} ({this._versionData.size} bytes)</b></p>
+                  <p>Installed Size: <b>{getBestUnits(this._versionData.installedSize)} ({this._versionData.installedSize} bytes)</b></p>
 
-              <section className='mt-11 top-border'>
-                          
+                  <aside id='action-buttons'>
+                    {
+                      this._versionData.isStored && this._versionData.status === VersionStatus.Processed &&
+                      <button
+                        onClick={() => downloadFile(this._versionData?.loc as string, `${this._versionData?.packageId}@${this._versionData?.version}`)}
+                        className='primary-button'
+                      >Download</button>
+                    }
+                  </aside>
+                </div>
+              </section>
+              <section className='mt-11 top-border'>     
                 <div className='left-half'>                  
                   <PackageList {...dependencyListProps} />
                 </div>
-                          
                 <div className='right-half'>
                   <PackageList {...incompatibilityListProps} />
                 </div>
-
               </section>
             </>
           </MainContainerContent>

@@ -49,11 +49,13 @@ export enum PackageType {
 export enum VersionStatus {
   Processing = 'processing', 
   Processed = 'processed',
-  Expired = 'expired',
+  Removed = 'removed',
   FailedMACOSX = 'failed_macosx',
   FailedNoFileDir = 'failed_no_file_dir', 
   FailedManifestExists = 'failed_manifest_exists', 
   FailedInvalidFileTypes = 'failed_invalid_file_types',
+  FailedFileTooLarge = 'failed_file_too_large',
+  FailedNotEnoughSpace = 'failed_not_enough_space',
   FailedServer = 'failed_server',
   Aborted = 'aborted'
 }
@@ -92,6 +94,8 @@ export type PackageData = {
  * @property {string} loc The URL from which to download the package version.
  * @property {number} installs The number of installs for this version.
  * @property {Date} uploadDate The upload time of the package.
+ * @property {number} size The size of the file in bytes.
+ * @property {number} installedSize The size of the xpkg file unzipped directory in bytes.
  */
 export type VersionData = {
   packageId: string;
@@ -104,6 +108,8 @@ export type VersionData = {
   installs: string;
   uploadDate: Date;
   status: VersionStatus;
+  size: number;
+  installedSize: number;
 };
 
 /**
@@ -146,10 +152,15 @@ import $ from 'jquery';
 import Version from '../scripts/version';
 import Big from 'big.js';
 import HTTPMethod from 'http-method-enum';
+import { StorageData, getStorageData } from '../scripts/registry';
+import StorageBar from '../components/StorageBar';
 
 class Packages extends Component {
 
   state: PackagesState;
+  
+  // This doesn't need to be part of the state since we get it before we finish loading anyway
+  private _storageData?: StorageData;
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -176,6 +187,14 @@ class Packages extends Component {
       return;
     }   
   } 
+
+  private _storageBar(): JSX.Element {
+    return (
+      <div id='table-top-storage-disp'>
+        <StorageBar {...this._storageData as StorageData} />
+      </div>
+    );
+  }
   
   private _packagesPage(): JSX.Element {
     const data = [] as string[][];
@@ -289,6 +308,7 @@ class Packages extends Component {
           {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
           <button className='primary-button' onClick={() => window.location.href = '/packages/new'}><span className='leading-4 text-[24pt]'>+</span>&nbsp;Upload a new package</button>
 
+          {this._storageBar()}
           <Table {...tableParams} />
         </>
 
@@ -297,44 +317,53 @@ class Packages extends Component {
   }
 
   componentDidMount(): void {
-    const token = tokenStorage.checkAuth() as string;
-    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
-      if (err)
-        return this.setState({
-          errorMessage: 'An unknown error occured'
-        } as Partial<PackagesState>);
+    getStorageData().then(data => {
+      this._storageData = data;
+      const token = tokenStorage.checkAuth() as string;
+      httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+        if (err)
+          return this.setState({
+            errorMessage: 'An unknown error occured'
+          } as Partial<PackagesState>);
       
-      if (res?.status !== 200) {
-        const errorMessage = 'An unknown error occured';
+        if (res?.status !== 200) {
+          const errorMessage = 'An unknown error occured';
 
-        if (res?.status === 401) {
-          tokenStorage.delToken();
-          window.location.href = '/';
+          if (res?.status === 401) {
+            tokenStorage.delToken();
+            window.location.href = '/';
+          }
+
+          return this.setState({ errorMessage } as Partial<PackagesState>);
         }
 
-        return this.setState({ errorMessage } as Partial<PackagesState>);
-      }
+        // We need to spread so that we can update the sub properties (data.packages instead of updating data all at once)
+        const data = { ...this.state.data };
+        data.packages = JSON.parse(res.response);
 
-      // We need to spread so that we can update the sub properties (data.packages instead of updating data all at once)
-      const data = { ...this.state.data };
-      data.packages = JSON.parse(res.response);
+        data.packages?.forEach(pkg => {
+          pkg.versions.sort((a, b) => {
+            const aVer = Version.fromString(a.version);
+            const bVer = Version.fromString(b.version);
 
-      data.packages?.forEach(pkg => {
-        pkg.versions.sort((a, b) => {
-          const aVer = Version.fromString(a.version);
-          const bVer = Version.fromString(b.version);
-
-          // Flipping a and b reverses the sort
-          return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+            // Flipping a and b reverses the sort
+            return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+          });
         });
-      });
 
-      this.setState({
-        errorMessage: void (0),
-        isLoading: false,
-        data
-      } as Partial<PackagesState>);
-    });
+        this.setState({
+          errorMessage: void (0),
+          isLoading: false,
+          data
+        } as Partial<PackagesState>);
+      });
+    })
+      .catch(err => {
+        console.error(err);
+        this.setState({
+          errorMessage: 'Could not retrieve storage data'
+        } as Partial<PackagesState>);
+      });
   }
 
   render(): ReactNode {
@@ -421,11 +450,13 @@ export function getStatusTextShort(status: VersionStatus) {
   switch (status) {
   case VersionStatus.Processing: return 'Processing';
   case VersionStatus.Processed: return 'Processed';
-  case VersionStatus.Expired: return 'Expired';
+  case VersionStatus.Removed: return 'Removed';
   case VersionStatus.FailedInvalidFileTypes:
   case VersionStatus.FailedMACOSX:
   case VersionStatus.FailedManifestExists:
   case VersionStatus.FailedNoFileDir:
+  case VersionStatus.FailedFileTooLarge:
+  case VersionStatus.FailedNotEnoughSpace:
   case VersionStatus.FailedServer:
     return 'Failed';
   default:

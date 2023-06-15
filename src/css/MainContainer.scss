@@ -46,6 +46,7 @@ $right-width: calc(99% - $left-width);
 .main-container-content {
   padding: 0 1.1em;
   width: 100%;
+  position: relative;
 
   h1 {
     color: $dark-blue;
