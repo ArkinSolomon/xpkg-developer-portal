@@ -370,7 +370,7 @@ class Upload extends Component {
                   };
 
                   const fileUploadProps: InputFileProps = {
-                    label: 'Files',
+                    label: 'Content File',
                     id: 'package-file',
                     name: 'package-file',
                     types: '.zip',

@@ -46,6 +46,7 @@ import '../../css/Input.scss';
 export default function InputFile(props: InputFileProps): JSX.Element {
   let typeString: string | undefined;
   let accept: string | undefined;
+
   if (props.types) {
     let types = props.types;
     if (typeof types === 'string')
@@ -61,7 +62,7 @@ export default function InputFile(props: InputFileProps): JSX.Element {
 
   return (
     <div className={'input-file ' + classes}>
-      <p>{props.label + typeString ?? ''}</p>
+      <p>{props.label + (typeString ?? '')}</p>
       <label className='input'>
         <input
           type='file'

@@ -76,10 +76,10 @@ $right-width: calc(99% - $left-width);
     .left-half,
     .right-half {
       vertical-align: top;
-      box-sizing: border-box;
       display: inline-block;
       padding: 0 2em;
       width: 50%;
+      box-sizing: border-box;
 
       .input {
         max-width: 85%;
@@ -88,6 +88,11 @@ $right-width: calc(99% - $left-width);
 
     .left-half {
       border-right: 1px solid $light-gray;
+      margin-right: -1px;
+    }
+
+    .right-half {
+      border-left: 1px solid $light-gray;
     }
 
     .left-third,
@@ -108,7 +113,9 @@ $right-width: calc(99% - $left-width);
 
       .left-third,
       .middle-third,
-      .left-half {
+      .left-half,
+      .right-half
+       {
         border: 0;
       }
     }
