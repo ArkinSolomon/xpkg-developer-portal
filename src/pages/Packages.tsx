@@ -451,6 +451,7 @@ export function getStatusTextShort(status: VersionStatus) {
   case VersionStatus.Processing: return 'Processing';
   case VersionStatus.Processed: return 'Processed';
   case VersionStatus.Removed: return 'Removed';
+  case VersionStatus.Aborted: return 'Aborted';
   case VersionStatus.FailedInvalidFileTypes:
   case VersionStatus.FailedMACOSX:
   case VersionStatus.FailedManifestExists:

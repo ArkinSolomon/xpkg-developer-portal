@@ -165,7 +165,7 @@ class Modify extends Component {
   private _getMetaText(): JSX.Element {
     switch (this._versionData?.status) {
     case VersionStatus.Processing:
-      return (<p>This package is still processing. Check back later</p>);
+      return (<p>This package is still processing. Check again later.</p>);
     case VersionStatus.Processed:
       return (
         <>
@@ -177,7 +177,7 @@ class Modify extends Component {
         </>
       );
     case VersionStatus.Removed:
-      return (<p>This version has been removed from the registry. Contact support.</p>);
+      return (<p>This version has been removed from the registry. Please contact support.</p>);
     case VersionStatus.Aborted:
       return (<p>Processing of this version was aborted. There may have been a server error, or your package took too long to process. Please try again.</p>);
     case VersionStatus.FailedFileTooLarge:
@@ -198,7 +198,7 @@ class Modify extends Component {
     case VersionStatus.FailedServer:
       return (<p>There was a server error packaging the file.</p>);
     default:
-      return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{ this._versionData?.status }</b>. Please contact support.</p>);
+      return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{ this._versionData?.status }</b>. This may be a bug.</p>);
     }
   }
 
