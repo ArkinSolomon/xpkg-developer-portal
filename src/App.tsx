@@ -37,6 +37,7 @@ declare global {
   interface Window {
     grecaptcha: ReCaptchaV2.ReCaptcha;
     SITE_KEY: string;
+    REGISTRY_URL: string;
   }
 }
 

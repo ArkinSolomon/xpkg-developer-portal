@@ -145,7 +145,7 @@ class Create extends Component {
     } as Partial<CreateState>);
     const { email, password, name } = values;
 
-    http.httpRequest('http://localhost:5020/auth/create', HTTPMethod.POST, void (0), {
+    http.httpRequest(`${window.REGISTRY_URL}/auth/create`, HTTPMethod.POST, void (0), {
       email,
       password,
       name,

@@ -121,7 +121,7 @@ class Login extends Component {
     });
     const { email, password } = values;
 
-    http.httpRequest('http://localhost:5020/auth/login', HTTPMethod.POST, void (0), {
+    http.httpRequest(`${window.REGISTRY_URL}/auth/login`, HTTPMethod.POST, void (0), {
       email,
       password,
       validation: this.state.recaptchaToken as string

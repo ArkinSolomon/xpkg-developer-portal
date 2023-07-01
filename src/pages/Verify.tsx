@@ -72,7 +72,7 @@ class Verify extends Component {
     let errorMessage;
     let response;
     try {
-      response = await httpRequest('http://localhost:5020/auth/verify/' + verificationToken, HTTPMethod.POST, void (0), {});
+      response = await httpRequest(`${window.REGISTRY_URL}/auth/verify/` + verificationToken, HTTPMethod.POST, void (0), {});
       errorMessage = void 0;
     } catch {
       errorMessage = 'Could not connect to server. Please try again later.';

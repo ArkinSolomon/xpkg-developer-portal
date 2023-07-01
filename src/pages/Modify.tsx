@@ -109,7 +109,7 @@ class Modify extends Component {
 
     const token = tokenStorage.checkAuth() as string;
 
-    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'
@@ -219,7 +219,7 @@ class Modify extends Component {
 
     try {
       await axios({
-        url: 'http://localhost:5020/packages/retry',
+        url: `${window.REGISTRY_URL}/packages/retry`,
         method: HTTPMethod.POST,
         data: formData,
         headers: {

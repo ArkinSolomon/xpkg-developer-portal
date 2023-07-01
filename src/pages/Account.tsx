@@ -121,7 +121,7 @@ class Account extends Component {
 
     // This request will fire twice in development, during production it'll be fine
     const token = tokenStorage.checkAuth() as string;
-    httpRequest('http://localhost:5020/account/data', HTTPMethod.GET, token, {}, (err, resp) => {
+    httpRequest(`${window.REGISTRY_URL}/account/data`, HTTPMethod.GET, token, {}, (err, resp) => {
       if (err || resp?.status !== 200) {
       
         if (resp?.status === 401) {
@@ -222,7 +222,7 @@ class Account extends Component {
                         // Force a rerender of the basic information page to gray out the change button
                       } as AccountState, () => this.updateRendered(this.basicInformation()));
       
-                      httpRequest('http://localhost:5020/account/changeName', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
+                      httpRequest(`${window.REGISTRY_URL}/account/changeName`, HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
                         newName: this.state.nameValue as string,
                       }, (err, res) => {
                         if (err)
@@ -307,7 +307,7 @@ class Account extends Component {
                 sendingVerification: true
               } as Partial<AccountState>, () => this.updateRendered(this.basicInformation()));
               
-              const response = await httpRequest('http://localhost:5020/account/reverify', HTTPMethod.POST, tokenStorage.checkAuth() as string, {});
+              const response = await httpRequest(`${window.REGISTRY_URL}/account/reverify`, HTTPMethod.POST, tokenStorage.checkAuth() as string, {});
 
               let errorMessage: string;
               switch (response.status) {

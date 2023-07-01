@@ -41,7 +41,7 @@ export async function getStorageData(): Promise<StorageData> {
   if (!token)
     throw new Error('No token');
   
-  const response = await http.httpRequest('http://localhost:5020/account/storage', HTTPMethod.GET, token, {});
+  const response = await http.httpRequest(`${window.REGISTRY_URL}/account/storage`, HTTPMethod.GET, token, {});
   if (response.status !== 200)
     throw Error('Invalid response status: ' + response.status);
   

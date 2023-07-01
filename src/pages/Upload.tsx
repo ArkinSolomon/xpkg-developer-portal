@@ -131,7 +131,7 @@ class Upload extends Component {
 
     const token = tokenStorage.checkAuth() as string;
 
-    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'
@@ -249,7 +249,7 @@ class Upload extends Component {
     formData.append('file', (document.getElementById('package-file') as any).files[0]);
     try {
       await axios({
-        url: 'http://localhost:5020/packages/upload',
+        url: `${window.REGISTRY_URL}/packages/upload`,
         method: HTTPMethod.POST,
         data: formData,
         headers: {

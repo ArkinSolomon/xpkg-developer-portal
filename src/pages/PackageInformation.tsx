@@ -93,6 +93,8 @@ class PackageInformation extends Component {
       window.location.href = '/';
       return;
     }   
+
+    this._updateDescription = this._updateDescription.bind(this);
   }
 
   componentDidMount(): void {
@@ -108,7 +110,7 @@ class PackageInformation extends Component {
 
     const token = tokenStorage.checkAuth() as string;
 
-    httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'
@@ -173,6 +175,90 @@ class PackageInformation extends Component {
     } as Partial<PackageInformationState>);
     
     return {};
+  }
+
+  private _updateDescription({ description }: DescUpdateValues) {
+    
+    const popupConfig: ConfirmPopupConfig = {
+      title: 'Update description', 
+      confirmText: 'Confirm',
+      closeText: 'Cancel',
+      onConfirm: () => {
+        this.setState({
+          isFormSubmitting: true
+        } as Partial<PackageInformationState>); 
+        
+        httpRequest(`${window.REGISTRY_URL}/packages/description`, HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
+          newDescription: description,
+          packageId: this.state.currentPackageData?.packageId as string
+        }, (err, res) => {
+          if (err || res?.status !== 204) {
+            this.setState({
+              isFormSubmitting: true
+            } as Partial<PackageInformationState>);   
+
+            let errMsg = 'an unknown error occured.';
+            if (res)
+              switch (res.status) {
+              case 401:
+                tokenStorage.delToken();
+                sessionStorage.setItem('post-auth-redirect', '/packages');
+                window.location.href = '/';
+                break;
+              case 400:
+                errMsg = {
+                  no_desc: 'no description.',
+                  no_id: 'no package id.',
+                  invalid_type: 'invalid data type.',
+                  short_desc: 'description too short.',
+                  long_desc: 'description too long.',
+                }[res.responseText]
+                  ?? `an unknown error occured [${res.responseText}].`;
+                break;
+              case 403:
+                errMsg = 'package not owned.';
+                break;
+              case 500:
+                errMsg = 'internal server error.';
+                break;
+              }
+
+            const popupConfig: ConfirmPopupConfig = {
+              title: 'Update failed',
+              showClose: false,
+              confirmText: 'Ok',
+              onClose: () => {
+                this.setState({
+                  isPopupVisible: false
+                } as Partial<PackageInformationState>);
+              },
+              children: <p className='generic-popup-text'>Could not update description, { errMsg }</p>
+            };
+
+            this.setState({
+              popupConfig,
+              isPopupVisible: true
+            } as Partial<PackageInformationState>);
+          } else {
+            sessionStorage.setItem('success_message', `The package description for '${this.state.currentPackageData?.packageName}' (${this.state.currentPackageData?.packageId}) was updated successfully`);
+            window.location.href = '/packages'; 
+          } 
+        });
+
+        return;
+      },
+      onClose: () => {
+        this.setState({
+          isPopupVisible: false
+        } as Partial<PackageInformationState>);
+      },
+      children: <p className='generic-popup-text'>Are you sure you want to modify the description of the package?</p>
+    };
+
+    this.setState({
+      popupConfig,
+      isPopupVisible: true
+    } as Partial<PackageInformationState>);
   }
 
   private _versionSubrow(version: VersionData): JSX.Element {
@@ -264,91 +350,7 @@ class PackageInformation extends Component {
                 initialValues={{
                   description: this.state.currentPackageData?.description
                 } as DescUpdateValues}
-                onSubmit={
-                  async ({description}) => {
-
-                    const popupConfig: ConfirmPopupConfig = {
-                      title: 'Update description', 
-                      confirmText: 'Confirm',
-                      closeText: 'Cancel',
-                      onConfirm: () => {
-                        this.setState({
-                          isFormSubmitting: true
-                        } as Partial<PackageInformationState>); 
-                        
-                        httpRequest('http://localhost:5020/packages/description', HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
-                          newDescription: description,
-                          packageId: this.state.currentPackageData?.packageId as string
-                        }, (err, res) => {
-                          if (err || res?.status !== 204) {
-                            this.setState({
-                              isFormSubmitting: true
-                            } as Partial<PackageInformationState>);   
-
-                            let errMsg = 'an unknown error occured.';
-                            if (res)
-                              switch (res.status) {
-                              case 401:
-                                tokenStorage.delToken();
-                                sessionStorage.setItem('post-auth-redirect', '/packages');
-                                window.location.href = '/';
-                                break;
-                              case 400:
-                                errMsg = {
-                                  no_desc: 'no description.',
-                                  no_id: 'no package id.',
-                                  invalid_type: 'invalid data type.',
-                                  short_desc: 'description too short.',
-                                  long_desc: 'description too long.',
-                                }[res.responseText]
-                                  ?? `an unknown error occured [${res.responseText}].`;
-                                break;
-                              case 403:
-                                errMsg = 'package not owned.';
-                                break;
-                              case 500:
-                                errMsg = 'internal server error.';
-                                break;
-                              }
-
-                            const popupConfig: ConfirmPopupConfig = {
-                              title: 'Update failed',
-                              showClose: false,
-                              confirmText: 'Ok',
-                              onClose: () => {
-                                this.setState({
-                                  isPopupVisible: false
-                                } as Partial<PackageInformationState>);
-                              },
-                              children: <p className='generic-popup-text'>Could not update description, { errMsg }</p>
-                            };
-
-                            this.setState({
-                              popupConfig,
-                              isPopupVisible: true
-                            } as Partial<PackageInformationState>);
-                          } else {
-                            sessionStorage.setItem('success_message', `The package description for '${this.state.currentPackageData?.packageName}' (${this.state.currentPackageData?.packageId}) was updated successfully`);
-                            window.location.href = '/packages'; 
-                          } 
-                        });
-
-                        return;
-                      },
-                      onClose: () => {
-                        this.setState({
-                          isPopupVisible: false
-                        } as Partial<PackageInformationState>);
-                      },
-                      children: <p className='generic-popup-text'>Are you sure you want to modify the description of the package?</p>
-                    };
-
-                    this.setState({
-                      popupConfig,
-                      isPopupVisible: true
-                    } as Partial<PackageInformationState>);
-                  }
-                }
+                onSubmit={this._updateDescription}
               >{({
                   handleChange,
                   handleSubmit

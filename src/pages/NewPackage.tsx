@@ -140,7 +140,7 @@ class NewPackage extends Component {
 
     try {
       await axios({
-        url: 'http://localhost:5020/packages/new',
+        url: `${window.REGISTRY_URL}/packages/new`,
         method: 'POST',
         data: formData,
         headers: {

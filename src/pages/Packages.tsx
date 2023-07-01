@@ -20,9 +20,9 @@
  * @enum {string}
  */
 enum PackagePage {
-  PACKAGES,
-  RESOURCES,
-  REPORTS
+  Packages,
+  Resources,
+  Reports
 }
 
 /**
@@ -93,7 +93,7 @@ export type PackageData = {
  * @property {boolean} isStored True if the version is stored.
  * @property {string} loc The URL from which to download the package version.
  * @property {number} installs The number of installs for this version.
- * @property {Date} uploadDate The upload time of the package.
+ * @property {string} uploadDate The upload timestamp of the package as an ISO string.
  * @property {number} size The size of the file in bytes.
  * @property {number} installedSize The size of the xpkg file unzipped directory in bytes.
  */
@@ -106,7 +106,7 @@ export type VersionData = {
   loc: string;
   privateKey: string;
   installs: string;
-  uploadDate: Date;
+  uploadDate: string;
   status: VersionStatus;
   size: number;
   installedSize: number;
@@ -172,7 +172,7 @@ class Packages extends Component {
     sessionStorage.removeItem('error_message');
 
     this.state = {
-      page: PackagePage.PACKAGES,
+      page: PackagePage.Packages,
       isLoading: true,
       data: {},
       successMessage,
@@ -239,20 +239,17 @@ class Packages extends Component {
         if (pkg.versions.length){
           for (const version of pkg.versions) {
 
+            const uploadDate = new Date(version.uploadDate);
+
             versions.push(
               <tr key={nanoid()}>
                 <td>{version.version}</td>
                 <td>{version.installs}</td>
                 <td>{version.isPublic ? 'Yes' : 'No'}</td>
-                <td>{!version.isPublic && version.isStored ? <a className='subtable-link' onClick={e => {
-                  e.preventDefault();
-                  $(e.target).parent().text(version.privateKey);
-                }}>Click to reveal</a> : '---'}</td>
+                <td>{version.isStored ? 'Yes' : 'No'}</td>
+                <td>{uploadDate.toLocaleDateString()} { uploadDate.toLocaleTimeString() }</td>
                 <td>{getStatusTextShort(version.status)}</td>
-                <td>{version.isStored && version.loc !== '---' ? <a className='subtable-link' onClick={e => {
-                  e.preventDefault();
-                  downloadFile(version.loc, `${version.packageId}@${version.version}.xpkg`);
-                }}>Download</a> : '---'}</td>
+                <td><a className='subtable-link' href={`/packages/modify?packageId=${version.packageId}&packageVersion=${version.version}`}>Modify</a></td>
               </tr>
             );
           }
@@ -285,9 +282,10 @@ class Packages extends Component {
                     <th>Version</th>
                     <th>Installs</th>
                     <th>Public</th>
-                    <th style={{ width: '47%' }}>Private Key</th>
+                    <th>Stored</th>
+                    <th>Uploaded</th>
                     <th>Status</th>
-                    <th>Download</th>
+                    <th>Modify</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -320,7 +318,7 @@ class Packages extends Component {
     getStorageData().then(data => {
       this._storageData = data;
       const token = tokenStorage.checkAuth() as string;
-      httpRequest('http://localhost:5020/account/packages', HTTPMethod.GET, token , { }, (err, res) => {
+      httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
         if (err)
           return this.setState({
             errorMessage: 'An unknown error occured'
@@ -367,8 +365,8 @@ class Packages extends Component {
   }
 
   render(): ReactNode {
-    const isPackagePageActive = this.state.page === PackagePage.PACKAGES;
-    const isResourcesPageActive = this.state.page === PackagePage.RESOURCES;
+    const isPackagePageActive = this.state.page === PackagePage.Packages;
+    const isResourcesPageActive = this.state.page === PackagePage.Resources;
 
     return (
       <MainContainer
@@ -378,21 +376,21 @@ class Packages extends Component {
               text: 'Packages',
               action: () =>
                 this.setState({
-                  page: PackagePage.PACKAGES
+                  page: PackagePage.Packages
                 })
             },
             {
               text: 'Resources',
               action: () =>
                 this.setState({
-                  page: PackagePage.RESOURCES
+                  page: PackagePage.Resources
                 })
             },
             {
               text: 'Bug Reports',
               action: () =>
                 this.setState({
-                  page: PackagePage.REPORTS
+                  page: PackagePage.Reports
                 })
             }
           ]}
