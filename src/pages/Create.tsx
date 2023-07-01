@@ -18,11 +18,13 @@
  * 
  * @typedef {Object} CreateState
  * @property {string} errorMessage The message of the error. Empty string if there is no error.
- * @property {boolean} invalidForm True if the form is invalid and should not allow submissions.
+ * @property {string} [recaptchaToken] The reCAPTCHA validation token to be sent to the server.
+ * @property {Partial<CreateValues>} errors The errors for each text box.
  */
  type CreateState = {
   errorMessage: string;
-  invalidForm: boolean;
+  recaptchaToken?: string;
+  errors: Partial<CreateValues>;
 }
 
 /**
@@ -53,144 +55,247 @@ import '../css/AuthBox.scss';
 import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
-import ErrorMessage from '../components/ErrorMessage';
 import * as util from '../scripts/validators';
 import HTTPMethod from 'http-method-enum';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 class Create extends Component {
+
+  state: CreateState;
+
   constructor(props: Record<string, never>) {
     super(props);
     this.state = {
       errorMessage: '',
-      invalidForm: true
-    } as CreateState;
+      errors: {}
+    };
 
-    this.validate = this.validate.bind(this);
-    
     const token = tokenStorage.checkAuth();
-    if (token)
-      window.location.href = '/packages';
+    if (token) {
+      const possibleRedir = sessionStorage.getItem('post-auth-redirect');
+      if (possibleRedir) {
+        sessionStorage.removeItem('post-auth-redirect');
+        window.location.href = possibleRedir;
+      }else 
+        window.location.href = '/packages';
+    }
+    
+    this._validate = this._validate.bind(this);
+    this._recaptchaChange = this._recaptchaChange.bind(this);
+    this._submit = this._submit.bind(this);
   }
 
-  validate({ email, password, checkPassword, name, agree }: CreateValues): FormikErrors<CreateValues> {
-    let invalidForm = false;
-    invalidForm = !util.validateEmail(email) || !util.validatePassword(password)
-      || typeof name !== 'string' || name.length < 3 || name.length > 32
-      || checkPassword !== password
-      || !agree;
+  private _removeMessageAfterDelay() {
+    setTimeout(() => this.setState({
+      errorMessage: ''
+    } as Partial<CreateState>), 3005);
+  }
+
+  private _recaptchaChange(token: string|null) {
     this.setState({
-      errorMessage: '',
-      invalidForm
+      recaptchaToken: token
+    } as Partial<CreateState>);
+  }
+
+  private _validate({ email, password, checkPassword, name, agree }: CreateValues): FormikErrors<CreateValues> {
+    const errors: Partial<CreateValues> = {};
+
+    if (email.length < 5)
+      errors.email = 'Email address too short';
+    else if (email.length > 64)
+      errors.email = 'Email address too long';
+    else if (!util.validateEmail(email))
+      errors.email = 'Invalid email address';
+    
+    if (name.length < 3)
+      errors.name = 'Name too short';
+    else if (name.length > 32)
+      errors.name = 'Name too long';
+    else if (!util.validateName(name))
+      errors.name = 'Invalid name';
+    
+    if (password.length < 8)
+      errors.password = 'Password too short';
+    else if (password.length > 64)
+      errors.password = 'Password too long';
+    else if (password.toLowerCase() === 'password')
+      errors.password = 'Password can not be "password"';
+    else if (!util.validatePassword(password))
+      errors.password = 'Invalid password';
+    
+    if (password !== checkPassword)
+      errors.checkPassword = 'Passwords do not match';
+    
+    let errorMessage = '';
+    if (!agree && !Object.keys(errors).length)
+      errorMessage = 'You can not sign up without agreeing to the privacy policy';
+    
+    this.setState({
+      errorMessage,
+      errors
     } as CreateState);
 
     // We handle errors on our own, so we just don't return anything
     return {};
   }
 
+  private async _submit(values: CreateValues, { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void; }) {
+    this.setState({
+      errorMessage: ''
+    } as Partial<CreateState>);
+    const { email, password, name } = values;
+
+    http.httpRequest('http://localhost:5020/auth/create', HTTPMethod.POST, void (0), {
+      email,
+      password,
+      name,
+      validation: this.state.recaptchaToken as string
+    }, (err, r) => {
+      setSubmitting(false);
+      if (err) {
+        this.setState({
+          errorMessage: 'Could not connect to server'
+        });
+        return console.error(err);
+      }
+      const resp = r as XMLHttpRequest;
+
+      if (resp.status !== 200) {
+        let errorMessage = 'An unknown error occured';
+        switch (resp.status) {
+        case 400:
+          errorMessage = 'Bad request';
+          break;
+        case 403: {
+          const itemInUse = resp.responseText as 'email' | 'name';
+          errorMessage = `${itemInUse === 'email' ? 'Email' : 'Name'}`;
+          break;
+        }
+        case 409:
+          errorMessage = 'Unable, suspicious activity';
+          this._removeMessageAfterDelay();
+          break;
+        case 418: 
+          errorMessage = 'Ensure you have filled out the captcha';
+          this._removeMessageAfterDelay();
+          break;
+        case 429: 
+          errorMessage = 'You are doing that too much, please slow down';
+          this._removeMessageAfterDelay(); 
+          break;
+        case 500:
+          errorMessage = 'Internal server error, please try again later';
+          this._removeMessageAfterDelay();
+          break;
+        }
+        
+        this.setState({
+          errorMessage
+        } as Partial<CreateState>);
+      } else {
+        const { token } = JSON.parse(resp.response);
+        tokenStorage.saveToken(token, values.rememberMe);
+
+        const possibleRedir = sessionStorage.getItem('post-auth-redirect');
+        if (possibleRedir) {
+          sessionStorage.removeItem('post-auth-redirect');
+          return window.location.href = possibleRedir;
+        }
+
+        window.location.href = '/packages';
+      }
+    });
+  }
+
   render() {
     return (
       <Formik
-        validate={this.validate}
+        validate={this._validate}
         validateOnChange={true}
         validateOnMount={true}
         initialValues={{
           email: '',
+          name: '',
           password: '',
-          rememberMe: false
+          rememberMe: false,
+          agree: false
         } as CreateValues}
-        onSubmit={
-          (values, { setSubmitting }) => {
-            this.setState({
-              errorMessage: ''
-            } as Partial<CreateState>);
-            const { email, password, name } = values;
-            http.httpRequest('http://localhost:5020/auth/create',HTTPMethod.POST, void (0), { email, password, name }, (err, r) => {
-              setSubmitting(false);
-              if (err) {
-                this.setState({
-                  errorMessage: 'Could not connect to server'
-                });
-                return console.error(err);
-              }
-              const resp = r as XMLHttpRequest;
-
-              if (resp.status !== 200) {
-                let message = 'An unknown error occured';
-                const errors: Record<number, string> = {
-                  400: 'Bad request',
-                  409: 'Email or name in use',
-                  500: 'Internal server error'
-                };
-                if (Object.hasOwnProperty.call(errors, resp.status))
-                  message = errors[resp.status];
-                this.setState({
-                  errorMessage: message
-                });
-
-              } else {
-                const { token } = JSON.parse(resp.response);
-                tokenStorage.saveToken(token, values.rememberMe);
-                const possibleRedir = sessionStorage.getItem('post-auth-redirect');
-                if (possibleRedir) {
-                  sessionStorage.removeItem('post-auth-redirect');
-                  return window.location.href = possibleRedir;
-                }
-                window.location.href = '/packages';
-              }
-            });
-          }
-        }>
+        onSubmit={this._submit}>
         {({
           handleChange,
           handleSubmit,
-          isSubmitting
+          isSubmitting,
         }) => {
           const linkDisabled = isSubmitting ? 'linkDisabled' : '';
-          const errorMessageActive = (this.state as CreateState).errorMessage !== '';
+          const errorMessageActive = this.state.errorMessage !== '';
 
           const emailFieldData: InputFieldProps = {
             name: 'email',
             label: 'Email',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 5,
+            maxLength: 64,
+            error: this.state.errors.email
           };
 
           const nameFieldData: InputFieldProps = {
             name:'name',
             label:'Name',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 3,
+            maxLength: 32,
+            error: this.state.errors.name
           };
           
           const passwordFieldData: InputFieldProps = {
             name: 'password',
             label: 'Password',
             type: 'password',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 8,
+            maxLength: 64,
+            error: this.state.errors.password
           };
 
           const checkPasswordFieldData: InputFieldProps = {
             name: 'checkPassword',
             label: 'Re-enter Password',
             type: 'password',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 8,
+            maxLength: 64,
+            error: this.state.errors.checkPassword
           };
 
           return (
-            <AuthBox title='Create Account' onSubmit={handleSubmit} isSubmitting={isSubmitting} submitEnabled={!errorMessageActive && !(this.state as CreateState).invalidForm}>
-              <ErrorMessage text={(this.state as CreateState).errorMessage} show={errorMessageActive} width='80%' center={true} />
+            <AuthBox
+              title='Create Account'
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              submitEnabled={!errorMessageActive && !Object.keys(this.state.errors).length && !!this.state.recaptchaToken}
+              errorMessgae={this.state.errorMessage}
+            >
               <InputField {...emailFieldData} />
               <InputField {...nameFieldData}/>
               <InputField {...passwordFieldData}/>
-              <InputField {...checkPasswordFieldData}/>
+              <InputField {...checkPasswordFieldData} />
+              
+              <div className='flex justify-center my-4'>
+                <ReCAPTCHA
+                  sitekey={window.SITE_KEY}
+                  onChange={this._recaptchaChange}
+                />
+              </div>
+
               <Checkbox name='rememberMe' title='Remember Me' onChange={handleChange} />
               <Checkbox name='agree' title='I agree to the privacy policy' onChange={handleChange} />
-              <div className="help-links">
-                <a href="/" className={linkDisabled}>Login Instead</a>
-                <a href="/privacy-policy" className={linkDisabled}>Privacy Policy</a>
+              <div className='help-links'>
+                <a href='/' className={linkDisabled}>Login Instead</a>
+                <a href='/privacy-policy' className={linkDisabled}>Privacy Policy</a>
               </div>
             </AuthBox>
           );
-        }
-        }
+        }}
       </Formik >
     );
   }

@@ -21,6 +21,7 @@ function AuthBox(props: {
   onSubmit: (e?: FormEvent<HTMLFormElement> | undefined) => void;
   isSubmitting: boolean;
   submitEnabled: boolean;
+  errorMessgae?: string;
 }) {
   return (
     <div id='auth-box-wrapper'>
@@ -28,6 +29,7 @@ function AuthBox(props: {
         <h2>{props.title}</h2>
         <form onSubmit={props.onSubmit}>
           <div id='auth-box-children-wrapper'>
+            <p className='auth-box-error'>{ props.errorMessgae }</p>
             {props.children}
           </div>
           <input type="submit" value="Submit" disabled={props.isSubmitting || !props.submitEnabled} />

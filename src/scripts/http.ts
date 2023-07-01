@@ -48,8 +48,8 @@ export function httpRequest(url: string, method: HTTPMethod, authorization: stri
     xhttp.open(method, url, true);
     if (authorization)
       xhttp.setRequestHeader('Authorization', authorization);
-    xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhttp.send(encodeURIObject(body));
+    xhttp.setRequestHeader('Content-Type', 'application/json');
+    xhttp.send(JSON.stringify(body));
   } else 
     return new Promise((resolve, reject) => {
       httpRequest(url, method, authorization, body, (err, res) => {

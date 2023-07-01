@@ -44,7 +44,7 @@ export function validatePassword(password: string): boolean {
  * @returns {boolean} True if the name is valid.
  */
 export function validateName(name: string): boolean {
-  return (name && typeof name === 'string' && name.length > 3 && name.length <= 32) as boolean;
+  return (name && typeof name === 'string' && name.length >= 3 && name.length <= 32) as boolean;
 }
 
 /**

@@ -16,9 +16,6 @@
 @import "_fonts.scss";
 @import "_mixins.scss";
 
-$auth-box-height: 33em;
-$auth-box-width: 24em;
-
 #auth-box-wrapper {
   display: flex;
   flex-direction: column;
@@ -31,8 +28,7 @@ $auth-box-width: 24em;
   border: 1px solid $light-gray;
   border-radius: 8px;
   background-color: white;
-  width: $auth-box-width;
-  height: $auth-box-height;
+  width: 29em;
   padding: 12px;
 
   h2 {
@@ -44,7 +40,7 @@ $auth-box-width: 24em;
 
   #auth-box-children-wrapper {
     padding: 12px;
-    height: calc($auth-box-height - 7em);
+    padding-bottom: 7em;
     width: 80%;
 
     border-radius: 4px;
@@ -60,7 +56,7 @@ $auth-box-width: 24em;
 
     .input-field {
       width: 85%;
-      margin: 0.5em auto;
+      margin: 0.7em auto;
     }
 
     .input-checkbox {
@@ -101,5 +97,14 @@ $auth-box-width: 24em;
         cursor: not-allowed;
       }
     }
+  }
+
+  p.auth-box-error {
+    font-family: $noto-sans;
+    color: $error-red;
+
+    line-height: 12pt;
+    height: 13pt;
+    text-align: center;
   }
 }

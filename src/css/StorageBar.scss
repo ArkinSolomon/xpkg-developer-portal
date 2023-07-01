@@ -21,28 +21,25 @@
     font-size: small;
   }
 
-  progress {
-    appearance: none;
+  .progress {
+    border-radius: 7px;
+    background-color: $light-gray;
+    width: 100%;
+    height: 16px;
 
-    &::-webkit-progress-bar {
-      border-radius: 120px;
-      background-color: $light-gray;
-    }
-
-    &::-webkit-progress-value {
-      border-radius: 120px;
+    &>div{
+      border-radius: 7px;
       background-color: $dark-blue;
+      height: 100%;
+      position: relative;
+      min-width: 14px;
     }
-  }
 
-  progress.approaching-full {
-    &::-webkit-progress-value {
+    &.approaching-full>div {
       background-color: $warning-yellow;
     }
-  }
-
-  progress.near-full {
-    &::-webkit-progress-value {
+  
+    &.near-full>div {
       background-color: $error-red;
     }
   }

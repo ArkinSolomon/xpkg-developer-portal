@@ -18,11 +18,13 @@
  * 
  * @typedef {Object} LoginState
  * @property {string} errorMessage The message of the error. Empty string if there is no error.
- * @property {boolean} invalidForm True if the form is invalid and should not allow submissions.
+ * @property {Partial<LoginValues>} errors The errors with each field in the form.
+ * @property {string} [recaptchaToken] The recaptcha token to send to the server.
  */
 type LoginState = {
   errorMessage: string;
-  invalidForm: boolean;
+  errors: Partial<LoginValues>;
+  recaptchaToken?: string;
 }
 
 /**
@@ -47,40 +49,140 @@ import '../css/AuthBox.scss';
 import * as tokenStorage from '../scripts/tokenStorage';
 import * as http from '../scripts/http';
 import Checkbox from '../components/Input/InputCheckbox';
-import ErrorMessage from '../components/ErrorMessage';
 import * as util from '../scripts/validators';
 import HTTPMethod from 'http-method-enum';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 class Login extends Component {
+
+  state: LoginState;
+
   constructor(props: Record<string, never>) {
     super(props);
     this.state = {
       errorMessage: '',
-      invalidForm: true
-    } as LoginState;
-
-    this.validate = this.validate.bind(this);
+      errors: {}
+    };
 
     const token = tokenStorage.checkAuth();
-    if (token)
-      window.location.href = '/packages';
+    if (token) {
+      const possibleRedir = sessionStorage.getItem('post-auth-redirect');
+      if (possibleRedir) {
+        sessionStorage.removeItem('post-auth-redirect');
+        window.location.href = possibleRedir;
+      }else 
+        window.location.href = '/packages';
+    }
+
+    this._validate = this._validate.bind(this);
+    this._recaptchaChange = this._recaptchaChange.bind(this);
+    this._submit = this._submit.bind(this);
   }
 
-  validate({ email, password }: LoginValues): FormikErrors<LoginValues> {
-    const invalidForm = !util.validateEmail(email) || !util.validatePassword(password);
+  private _removeMessageAfterDelay() {
+    setTimeout(() => this.setState({
+      errorMessage: ''
+    } as Partial<LoginState>), 3005);
+  }
+
+  private _recaptchaChange(token: string|null) {
+    this.setState({
+      recaptchaToken: token
+    } as Partial<LoginState>);
+  }
+
+  private _validate({ email, password }: LoginValues): FormikErrors<LoginValues> {
+    const errors: Partial<LoginValues> = {};
+
+    if (email.length < 5)
+      errors.email = 'Email address too short';
+    else if (email.length > 64)
+      errors.email = 'Email address too long';
+    else if (!util.validateEmail(email))
+      errors.email = 'Invalid email address';
+    
+    if (!util.validatePassword(password))
+      
+      // Not shown
+      errors.password = 'invalid password';
+
     this.setState({
       errorMessage: '',
-      invalidForm
+      errors
     } as LoginState);
 
     // We handle errors on our own, so we just don't return anything
     return {};
   }
 
+  private async _submit(values: LoginValues, { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void; }) {
+    this.setState({
+      errorMessage: ''
+    });
+    const { email, password } = values;
+
+    http.httpRequest('http://localhost:5020/auth/login', HTTPMethod.POST, void (0), {
+      email,
+      password,
+      validation: this.state.recaptchaToken as string
+    }, (err, r) => {
+      setSubmitting(false);
+      if (err) {
+        this.setState({
+          errorMessage: 'There was an error connecting to the server'
+        });
+        this._removeMessageAfterDelay();
+        return console.error(err);
+      }
+      
+      const resp = r as XMLHttpRequest;
+
+      if (resp.status !== 200) {
+        let errorMessage = 'An unknown error occured';
+        switch (resp.status) {
+        case 400:
+          errorMessage = 'Bad request';
+          break;
+        case 401:
+          errorMessage = 'Invalid email and/or password';
+          break;
+        case 409:
+          errorMessage = 'Unable, suspicious activity';
+          this._removeMessageAfterDelay();
+          break;
+        case 418:
+          errorMessage = 'Ensure you have filled out the captcha';
+          break;
+        case 429:
+          errorMessage = 'You are doing that too much, please slow down';
+          break;
+        case 500:
+          errorMessage = 'Internal server error, please try again later';
+          break;
+        }
+        this.setState({
+          errorMessage
+        } as Partial<LoginState>);
+
+        if (resp.status !== 400)
+          this._removeMessageAfterDelay();
+      } else {
+        const { token } = JSON.parse(resp.response);
+        tokenStorage.saveToken(token, values.rememberMe);
+        const possibleRedir = sessionStorage.getItem('post-auth-redirect');
+        if (possibleRedir) {
+          sessionStorage.removeItem('post-auth-redirect');
+          return window.location.href = possibleRedir;
+        }
+        window.location.href = '/packages';
+      }
+    });
+  }
+
   render() {
     return (
       <Formik
-        validate={this.validate}
+        validate={this._validate}
         validateOnChange={true}
         validateOnMount={true}
         initialValues={{
@@ -88,44 +190,7 @@ class Login extends Component {
           password: '',
           rememberMe: false
         } as LoginValues}
-        onSubmit={
-          (values, { setSubmitting }) => {
-            this.setState({
-              errorMessage: ''
-            });
-            const { email, password } = values;
-            http.httpRequest('http://localhost:5020/auth/login', HTTPMethod.POST, void (0), { email, password }, (err, r) => {
-              setSubmitting(false);
-              if (err)
-                return console.error(err);
-              
-              const resp = r as XMLHttpRequest;
-
-              if (resp.status !== 200) {
-                let message = 'An unknown error occured';
-                const errors: Record<number, string> = {
-                  400: 'Bad request',
-                  401: 'Invalid username/password combination',
-                  500: 'Internal server error'
-                };
-                if (Object.hasOwnProperty.call(errors, resp.status))
-                  message = errors[resp.status];
-                this.setState({
-                  errorMessage: message
-                });
-              } else {
-                const { token } = JSON.parse(resp.response);
-                tokenStorage.saveToken(token, values.rememberMe);
-                const possibleRedir = sessionStorage.getItem('post-auth-redirect');
-                if (possibleRedir) {
-                  sessionStorage.removeItem('post-auth-redirect');
-                  return window.location.href = possibleRedir;
-                }
-                window.location.href = '/packages';
-              }
-            });
-          }
-        }>
+        onSubmit={ this._submit }>
         {({
           handleChange,
           handleSubmit,
@@ -137,14 +202,19 @@ class Login extends Component {
           const emailFieldData: InputFieldProps = {
             name: 'email',
             label: 'Email',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 5,
+            maxLength: 64,
+            error: this.state.errors.email
           };
 
           const passwordFieldData: InputFieldProps = {
             name: 'password',
             label: 'Password',
             type: 'password',
-            onChange: handleChange
+            onChange: handleChange,
+            minLength: 8,
+            maxLength: 64
           };
 
           return (
@@ -152,16 +222,19 @@ class Login extends Component {
               title='Login'
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
-              submitEnabled={!errorMessageActive && !(this.state as LoginState).invalidForm}
+              submitEnabled={!errorMessageActive && !Object.keys(this.state.errors).length && !!this.state.recaptchaToken}
+              errorMessgae={this.state.errorMessage}
             >
-              <ErrorMessage
-                text={(this.state as LoginState).errorMessage}
-                show={errorMessageActive}
-                width='80%'
-                center={true}
-              />
               <InputField {...emailFieldData} />
               <InputField {...passwordFieldData} />
+
+              <div className='flex justify-center my-4'>
+                <ReCAPTCHA
+                  sitekey={window.SITE_KEY}
+                  onChange={this._recaptchaChange}
+                />
+              </div>
+
               <Checkbox
                 name='rememberMe'
                 title='Remember Me'

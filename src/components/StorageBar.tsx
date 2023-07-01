@@ -27,7 +27,11 @@ function StorageBar(props: StorageData) {
   return (
     <div className='storage-bar'>
       <p><b>{getBestUnits(props.usedStorage)}</b> of <b>{getBestUnits(props.totalStorage)}</b> used</p>
-      <progress className={storageUsageClass} value={props.usedStorage} max={props.totalStorage} />
+      <div className={'progress ' + storageUsageClass} >
+        <div style={{
+          width: (props.usedStorage / props.totalStorage) * 100 + '%',
+        }}></div>
+      </div>
     </div>
   );
 }

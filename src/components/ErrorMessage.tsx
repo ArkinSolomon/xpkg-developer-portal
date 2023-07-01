@@ -15,11 +15,8 @@
 import '../css/ErrorMessage.scss';
 
 function ErrorMessage(props: { text: string; show: boolean; width?: string; center?: boolean; }) {
-  const width = props.width ?? 'auto';
-  let classes = 'error-message' + (props.show ? '' : ' error-message-hidden');
-  classes += (props.center ? ' ml-auto mr-auto' : '');
   return (
-    <p className={classes} style={{ width }}>{props.text}</p>
+    <p style={{ color: 'red'}}>////REPLACE THIS THIS IS NO LONGER USEFUL////</p>
   );
 }
 

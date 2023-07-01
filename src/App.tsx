@@ -33,6 +33,13 @@ import Verify from './pages/Verify';
 import Upload from './pages/Upload';
 import Modify from './pages/Modify';
 
+declare global {
+  interface Window {
+    grecaptcha: ReCaptchaV2.ReCaptcha;
+    SITE_KEY: string;
+  }
+}
+
 function App() {
   return (
     <Router>
