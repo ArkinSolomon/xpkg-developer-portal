@@ -48,6 +48,14 @@ $right-width: calc(99% - $left-width);
   width: 100%;
   position: relative;
 
+  &>a {
+    text-decoration: underline;
+    color: $dark-blue;
+    display: block;
+    margin-bottom: 4px;
+    width: fit-content;
+  }
+
   h1 {
     color: $dark-blue;
     font-size: 20pt;
@@ -77,13 +85,8 @@ $right-width: calc(99% - $left-width);
     .right-half {
       vertical-align: top;
       display: inline-block;
-      padding: 0 2em;
       width: 50%;
       box-sizing: border-box;
-
-      .input {
-        max-width: 85%;
-      }
     }
 
     .left-half {

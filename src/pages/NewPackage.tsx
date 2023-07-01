@@ -201,7 +201,11 @@ class NewPackage extends Component {
   render(): ReactNode {
     return (
       <MainContainer>
-        <MainContainerContent title='New package'>
+        <MainContainerContent
+          title='New package'
+          backButtonText='Packages'
+          backButtonURL='/packages'
+        >
           <Formik
             validate={this._validate.bind(this)}
             validateOnChange={true}

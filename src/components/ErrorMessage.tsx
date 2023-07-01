@@ -14,9 +14,10 @@
  */
 import '../css/ErrorMessage.scss';
 
-function ErrorMessage(props: { text: string; show: boolean; width?: string; center?: boolean; }) {
+function ErrorMessage(props: { text: string; show: boolean; }) {
+  const classes = 'error-message' + (props.show ? '' : ' error-message-hidden');
   return (
-    <p style={{ color: 'red'}}>////REPLACE THIS THIS IS NO LONGER USEFUL////</p>
+    <p className={classes}>{props.text}</p>
   );
 }
 

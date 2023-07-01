@@ -281,7 +281,7 @@ class PackageInformation extends Component {
         <div className='subrow-top-right'>
           <button
             className='primary-button'
-            onClick={() => window.location.href = `/packages/modify?packageId=${this.state.currentPackageData?.packageId}&packageVersion=${version.version}`}
+            onClick={() => window.location.href = `/packages/details?packageId=${this.state.currentPackageData?.packageId}&packageVersion=${version.version}&referrer=package_info`}
           >Modify</button>
         </div>
       </div>
@@ -341,7 +341,11 @@ class PackageInformation extends Component {
 
       return (
         <MainContainer>
-          <MainContainerContent title="Edit Package">
+          <MainContainerContent
+            title='Edit Package'
+            backButtonText='Packages'
+            backButtonURL='/packages'
+          >
             <>
               <Formik
                 validate={this._validateDescription.bind(this)}

@@ -31,7 +31,7 @@ import Footer from './components/Footer';
 import Tools from './pages/Tools';
 import Verify from './pages/Verify';
 import Upload from './pages/Upload';
-import Modify from './pages/Modify';
+import Details from './pages/Details';
 
 declare global {
   interface Window {
@@ -55,7 +55,7 @@ function App() {
 
         <Route path='/packages' element={<Packages />} />
         <Route path='/packages/package' element={<PackageInformation />} />
-        <Route path='/packages/modify' element={ <Modify />} />
+        <Route path='/packages/details' element={ <Details />} />
         <Route path='/packages/new' element={<NewPackage />} />
         <Route path='/packages/upload' element={<Upload />} />
         

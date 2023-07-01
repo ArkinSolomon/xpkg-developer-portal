@@ -15,9 +15,15 @@
 import { ReactElement } from 'react';
 import '../../css/MainContainer.scss';
 
-function MainContainerContent(props: { title: string; children: ReactElement; }) {
+function MainContainerContent(props: {
+  title: string;
+  children: ReactElement;
+  backButtonURL?: string;
+  backButtonText?: string;
+}) {
   return (
     <div className='main-container-content mb-6'>
+      {props.backButtonURL && <a href={props.backButtonURL}>{`< ${props.backButtonText || props.backButtonURL}`}</a>}
       <h1>{props.title}</h1>
       {props.children}
     </div>

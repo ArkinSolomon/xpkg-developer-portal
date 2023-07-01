@@ -93,6 +93,7 @@ class Upload extends Component {
 
   private _packageId?: string;
   private _defaultVersion = '1.0.0';
+  private _defaultXpSelection?: string;
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -128,9 +129,10 @@ class Upload extends Component {
     }
 
     this._packageId = decodeURIComponent(searchParams.get('packageId') as string).trim().toLowerCase();
+    let defaultDependencies: [string, string][] = [];
+    let defaultIncompatibilities: [string, string][] = [];
 
     const token = tokenStorage.checkAuth() as string;
-
     httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
@@ -186,12 +188,20 @@ class Upload extends Component {
         }
 
         this._defaultVersion = lastVersion.toString();
+
+        const lastVersionData = packageData.versions[0];
+        this._defaultXpSelection = lastVersionData.xpSelection;
+
+        defaultDependencies = JSON.parse(JSON.stringify(lastVersionData.dependencies)),
+        defaultIncompatibilities = JSON.parse(JSON.stringify(lastVersionData.incompatibilities)); 
       }
       
       this.setState({
         errorMessage: void (0),
         isLoading: false,
-        packageData
+        packageData,
+        dependencies: defaultDependencies,
+        incompatibilities: defaultIncompatibilities
       } as Partial<UploadState>);
     });
   }
@@ -346,7 +356,7 @@ class Upload extends Component {
                 initialValues={{
                   packageId: this.state.packageData?.packageId,
                   packageVersion: this._defaultVersion,
-                  xplaneSelection: '',
+                  xplaneSelection: this._defaultXpSelection,
                   isPublic: true,
                   isPrivate: false,
                   isStored: true
@@ -360,6 +370,7 @@ class Upload extends Component {
                 }) => {
                   const parsedVersion = Version.fromString(values.packageVersion);
                   const packageVersionProps: InputFieldProps = {
+                    classes: ['w-10/12'],
                     name: 'packageVersion',
                     label: parsedVersion ? `Package Version (${parsedVersion.toString()})`: 'Package Version',
                     placeholder: 'x.x.x',
@@ -384,9 +395,11 @@ class Upload extends Component {
                   };
 
                   const xpCompatiblityFieldProps: InputFieldProps = {
+                    classes: ['w-10/12'],
                     label: 'X-Plane Compatiblity',
                     placeholder: 'x.x.x-x.x.x',
                     name: 'xplaneSelection',
+                    defaultValue: this._defaultXpSelection,
                     minLength: 1,
                     maxLength: 256,
                     error: this.state.errors.xplaneSelection

@@ -59,8 +59,8 @@ class PackageList extends Component {
     this._lastLen = props.list.length;
   }
 
-  shouldComponentUpdate(): boolean {
-    return this._lastLen !== (this.props as PackageListProps).list.length;
+  shouldComponentUpdate(nextProps: PackageListProps): boolean {
+    return (this.props as PackageListProps).list !== nextProps.list || this._lastLen !== (this.props as PackageListProps).list.length;
   }
 
   private _onChangeCaller(): void {
@@ -176,8 +176,8 @@ class PackageList extends Component {
 
     return (
       <>
-        <p>{title}</p>
         <div className='package-list'>
+          <p>{title}</p>
           {list.length === 0 && <p className='package-list-empty'>{ noneText }</p>}
           {this._createList()}
         </div>

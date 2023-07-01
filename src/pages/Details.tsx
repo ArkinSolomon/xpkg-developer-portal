@@ -14,9 +14,9 @@
  */
 
 /**
- * The state of the modify page.
+ * The state of the details page.
  * 
- * @typedef {Object} ModifyState
+ * @typedef {Object} DetailsState
  * @property {boolean} isLoading True if the page is loading (getting data from the registry).
  * @property {string} [errorMessage] Any errors that occured while fetching package data. If not undefined, it will display the error page with this message.
  * @property {[string, string][]} dependencies The dependencies of the version being modified. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
@@ -27,13 +27,12 @@
  * @property {number} uploadProgress The upload progress, which is a number between 0 and 1, where 0 is 0% uploaded, and 1 is 100% uploaded. 
  * @property {string} [uploadError] A human-readable message, which is set if there was an error with the upload.
  */
-type ModifyState = {
+type DetailsState = {
   isLoading: boolean;
   errorMessage?: string;
   dependencies: [string, string][];
   incompatibilities: [string, string][];
   file?: File;
-  incompatibilityError: boolean;
   isUploading: boolean;
   uploadProgress: number;
   uploadError?: string;
@@ -51,20 +50,22 @@ import MainContainerLoading from '../components/Main Container/MainContainerLoad
 import MainContainerError from '../components/Main Container/MainContainerError';
 import PackageInfoFields from '../components/PackageInfoFields';
 import PackageList, { PackageListProps } from '../components/PackageList';
-import '../css/Modify.scss';
+import '../css/Details.scss';
 import { getBestUnits } from '../scripts/displayUtil';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import LoadingBarPopup from '../components/LoadingBarPopup';
 import axios, { AxiosError } from 'axios';
+import InputField, { InputFieldProps } from '../components/Input/InputField';
 
-class Modify extends Component {
+class Details extends Component {
   
-  state: ModifyState;
+  state: DetailsState;
 
   private _packageData?: PackageData;
   private _versionData?: VersionData;
 
-  private _initialIncompatibilities = '[]';
+  private _backURL?: string;
+  private _backText?: string;
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -73,7 +74,6 @@ class Modify extends Component {
       isLoading: true,
       dependencies: [],
       incompatibilities: [],
-      incompatibilityError: false,
       isUploading: false,
       uploadProgress: 0
     };
@@ -84,7 +84,7 @@ class Modify extends Component {
       sessionStorage.setItem('post-auth-redirect', '/packages');
       window.location.href = '/';
       return;
-    }   
+    }
   }
 
   componentDidMount(): void {
@@ -98,13 +98,26 @@ class Modify extends Component {
     } catch (e) {
       return this.setState({
         errorMessage: 'Invalid package identifier or version provided'
-      } as Partial<ModifyState>);
+      } as Partial<DetailsState>);
+    }
+
+    const referrer = urlParams.get('referrer') || 'packages';
+    switch (referrer) {
+    case 'package_info':
+      this._backText = 'Package Information';
+      this._backURL = '/packages/package?packageId=' + packageId;
+      break;
+    case 'packages':
+    default:
+      this._backText = 'Packages';
+      this._backURL = '/packages';
+      break;
     }
 
     if (!Version.fromString(version)) {
       return this.setState({
         errorMessage: 'Invalid version provided'
-      } as Partial<ModifyState>);
+      } as Partial<DetailsState>);
     }
 
     const token = tokenStorage.checkAuth() as string;
@@ -113,7 +126,7 @@ class Modify extends Component {
       if (err)
         return this.setState({
           errorMessage: 'An unknown error occured'
-        } as Partial<ModifyState>);
+        } as Partial<DetailsState>);
       
       if (res?.status !== 200) {
 
@@ -127,7 +140,7 @@ class Modify extends Component {
         return this.setState({
           isLoading: false,
           errorMessage: 'An unknown error occured'
-        } as Partial<ModifyState>);
+        } as Partial<DetailsState>);
       }
 
       this._packageData = (JSON.parse(res.response) as PackageData[])
@@ -151,14 +164,11 @@ class Modify extends Component {
         });
         return;
       }
-
-      // TODO get incompatibilites and dependencies
-      this._initialIncompatibilities = JSON.stringify([]);
       
       this.setState({
         errorMessage: void (0),
         isLoading: false
-      } as Partial<ModifyState>);
+      } as Partial<DetailsState>);
     });
   }
 
@@ -208,7 +218,7 @@ class Modify extends Component {
       isUploading: true,
       uploadProgress: 0,
       uploadError: void 0
-    } as Partial<ModifyState>);
+    } as Partial<DetailsState>);
 
     const formData = new FormData();
     formData.append('packageId', this._packageData?.packageId as string);
@@ -228,7 +238,7 @@ class Modify extends Component {
         onUploadProgress: e  => {
           this.setState({
             uploadProgress: e.progress
-          } as Partial<ModifyState>);
+          } as Partial<DetailsState>);
         },
       });
 
@@ -259,7 +269,7 @@ class Modify extends Component {
       this.setState({
         uploadError: errorMessage,
         isUploading: false
-      } as Partial<ModifyState>);
+      } as Partial<DetailsState>);
     }
   }
 
@@ -277,7 +287,7 @@ class Modify extends Component {
             return;
           this.setState({
             file: e.target.files[0]
-          } as Partial<ModifyState>);
+          } as Partial<DetailsState>);
         }
       };
 
@@ -331,7 +341,7 @@ class Modify extends Component {
       if (!this._versionData ) {
         this.setState({
           errorMessage: 'Version data not found on client'
-        } as Partial<ModifyState>);
+        } as Partial<DetailsState>);
         return (<p>Error... please wait</p>); // Will load error page once state is set
       }
 
@@ -347,9 +357,15 @@ class Modify extends Component {
         list: this.state.incompatibilities,
         title: 'Incompatibilities',
         noneText: 'No incompatibilities',
-        onChange: e => this.setState({
-          incompatibilityError: e
-        } as Partial<ModifyState>)
+        readonly: true
+      };
+
+      const xpSelectionFieldProps: InputFieldProps = {
+        classes: ['w-full'],
+        label: 'X-Plane Selection',
+        placeholder: '<unknown selection>',
+        defaultValue: this._versionData?.xpSelection,
+        readonly: true
       };
 
       return (
@@ -361,7 +377,11 @@ class Modify extends Component {
             text={this._getLoadingBarText()}
           />
           <MainContainer>
-            <MainContainerContent title='Modify Version'>
+            <MainContainerContent
+              title='Version Details'
+              backButtonText={this._backText}
+              backButtonURL={this._backURL}
+            >
               <>
                 <PackageInfoFields
                   packageId={this._versionData.packageId}
@@ -390,6 +410,11 @@ class Modify extends Component {
                   </div>
                 </section>
                 {this._reuploadSection()}
+                <section className='mt-7 no-border'>
+                  <div className='left-half'>
+                    <InputField {...xpSelectionFieldProps} />
+                  </div>
+                </section>
                 <section className='mt-11'>     
                   <div className='left-half'>                  
                     <PackageList {...dependencyListProps} />
@@ -397,13 +422,6 @@ class Modify extends Component {
                   <div className='right-half'>
                     <PackageList {...incompatibilityListProps} />
                   </div>
-                </section>
-                <section className='mt-9'>
-                  <button
-                    type='button'
-                    className='primary-button float-right'
-                    disabled={this.state.incompatibilityError || this.state.isUploading || this._initialIncompatibilities === JSON.stringify(this.state.incompatibilities)}
-                  >Update Incompatibilities</button>
                 </section>
               </>
             </MainContainerContent>
@@ -426,4 +444,4 @@ function downloadInstallationFile(packageId: string, packageVersion: string, pas
   downloadFile(URL.createObjectURL(blob), `${packageId}@${packageVersion}.xpkg`);
 }
 
-export default Modify;
+export default Details;

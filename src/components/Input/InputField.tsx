@@ -31,6 +31,7 @@
  * @property {boolean|Function<boolean>} [hiddenError] True if there is an error that has no message. The box will be outlined red.
  * @property {string} [inputKey] A key passed to the input element. Useful for dynamically created fields.
  * @property {boolean} [readonly] True if the field should be readonly.
+ * @property {number} [tabIndex] The tab index to use for the field.
  */
 export type InputFieldProps = {
   name?: string;
@@ -47,6 +48,7 @@ export type InputFieldProps = {
   hiddenError?: boolean | (() => boolean);
   inputKey?: string;
   readonly?: boolean;
+  tabIndex?: number;
 };
 
 /**
@@ -136,6 +138,7 @@ class InputField extends Component {
           onChange={props.onChange}
           readOnly={props.readonly}
           key={props.inputKey}
+          tabIndex={props.readonly ? -1 : props.tabIndex}
         />
         {props.error && 
           <p className='error error-text'>

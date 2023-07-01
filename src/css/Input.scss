@@ -49,14 +49,13 @@
     height: 18pt;
     width: 100%;
     box-sizing: border-box;
-
-    padding-left: 7px;
   }
 }
 
 .input-field {
   input {
     appearance: none;
+    height: 20pt;
 
     display: block;
     border-radius: 5px;
@@ -118,8 +117,8 @@
     height: 1.4em;
     vertical-align: text-bottom;
     display: inline-block;
-    // display: contents;
-    // line-height: 1.4em;
+    padding-left: 7px;
+
   }
 }
 

@@ -94,8 +94,12 @@ export type PackageData = {
  * @property {string} loc The URL from which to download the package version.
  * @property {number} installs The number of installs for this version.
  * @property {string} uploadDate The upload timestamp of the package as an ISO string.
+ * @property {VersionStatus} status The status of the version.
+ * @property {[string, string][]} dependencies The dependencies of the version.
+ * @property {[string, string][]} incompatibilities The incompatibilities of the version.
  * @property {number} size The size of the file in bytes.
  * @property {number} installedSize The size of the xpkg file unzipped directory in bytes.
+ * @property {string} xpSelection The X-Plane selection string.
  */
 export type VersionData = {
   packageId: string;
@@ -108,8 +112,11 @@ export type VersionData = {
   installs: string;
   uploadDate: string;
   status: VersionStatus;
+  dependencies: [string, string][];
+  incompatibilities: [string, string][];
   size: number;
   installedSize: number;
+  xpSelection: string;
 };
 
 /**
@@ -249,7 +256,7 @@ class Packages extends Component {
                 <td>{version.isStored ? 'Yes' : 'No'}</td>
                 <td>{uploadDate.toLocaleDateString()} { uploadDate.toLocaleTimeString() }</td>
                 <td>{getStatusTextShort(version.status)}</td>
-                <td><a className='subtable-link' href={`/packages/modify?packageId=${version.packageId}&packageVersion=${version.version}`}>Modify</a></td>
+                <td><a className='subtable-link' href={`/packages/details?packageId=${version.packageId}&packageVersion=${version.version}`}>Details</a></td>
               </tr>
             );
           }
@@ -285,7 +292,7 @@ class Packages extends Component {
                     <th>Stored</th>
                     <th>Uploaded</th>
                     <th>Status</th>
-                    <th>Modify</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,7 +311,7 @@ class Packages extends Component {
       <MainContainerContent title='Packages'>
         <>
           {this.state.successMessage && <p className='success-message'>{this.state.successMessage}</p>}
-          <button className='primary-button' onClick={() => window.location.href = '/packages/new'}><span className='leading-4 text-[24pt]'>+</span>&nbsp;Upload a new package</button>
+          <button className='primary-button' onClick={() => window.location.href = '/packages/new'}><span className='leading-4 text-[24pt]'>+</span>&nbsp;Create a new package</button>
 
           {this._storageBar()}
           <Table {...tableParams} />
