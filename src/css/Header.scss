@@ -33,9 +33,16 @@ header {
     margin-left: $header-margin;
     font-size: 20pt;
 
-    display: flex;
+    display: inline-flex;
     align-items: center;
     height: $header-height;
+  }
+
+  #header-logo {
+    max-height: 80%;
+    vertical-align: middle;
+    transform: translateY(-6px);
+    padding-left: 12px;
   }
 
   #header-buttons {

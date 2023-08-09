@@ -18,9 +18,10 @@ import HeaderButton from './HeaderButton';
 function Header() {
   return (
     <header>
+      <img id='header-logo' src='/box-logo.png' alt='X-Pkg Box Logo' className='inline'/>
       <h1>X-Pkg Developer Portal</h1>
 
-      <div id="header-buttons">
+      <div id='header-buttons'>
         <HeaderButton text='Packages' link='/packages' />
         <HeaderButton text='Tools' link='/tools' />
         <HeaderButton text='Documentation' link='https://documentation.x-pkg.net' />

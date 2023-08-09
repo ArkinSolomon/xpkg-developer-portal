@@ -33,6 +33,7 @@ import HTTPMethod from 'http-method-enum';
  * Try to get the storage data for the currently logged in author. 
  * 
  * @async
+ * @deprecated
  * @returns {Promise<StorageData>} The storage data of the currently logged in author.
  * @throws {Error} An error is thrown if the author does not have a token.
  */
@@ -41,7 +42,8 @@ export async function getStorageData(): Promise<StorageData> {
   if (!token)
     throw new Error('No token');
   
-  const response = await http.httpRequest(`${window.REGISTRY_URL}/account/storage`, HTTPMethod.GET, token, {});
+  // TODO: change this function
+  const response = await http.httpRequest(`${window.REGISTRY_URL}/account/data`, HTTPMethod.GET, token, {});
   if (response.status !== 200)
     throw Error('Invalid response status: ' + response.status);
   

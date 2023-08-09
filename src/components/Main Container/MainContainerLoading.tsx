@@ -16,9 +16,9 @@ import '../../css/MainContainer.scss';
 
 function MainContainerLoading({ loadingMessage }: { loadingMessage: string; }) {
   return (
-    <div className="error-screen">
+    <div className='error-screen'>
       <h3>{ loadingMessage }</h3>
-      <img src="/loading.gif" alt="Loading GIF" />
+      <img src='/loading.gif' alt='Loading GIF' />
     </div>
   );
 }

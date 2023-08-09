@@ -132,15 +132,19 @@ $right-width: calc(99% - $left-width);
   text-align: center;
   color: $dark-blue;
 
+  h3 {
+    font-size: 16pt;
+  }
+
   button {
     @include primary-button();
     margin-bottom: 30px;
   }
 
   img {
+    margin-top: 0.74em;
     display: block;
-    width: 100px;
-    height: 100px;
+    height: 60px;
     margin-left: auto;
     margin-right: auto;
   }

@@ -148,14 +148,13 @@ import MainContainerContent from '../components/Main Container/MainContainerCont
 import MainContainerError from '../components/Main Container/MainContainerError';
 import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 import SideBar from '../components/Main Container/SideBar';
-import {  downloadFile, httpRequest } from '../scripts/http';
+import { httpRequest } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
 import '../css/Buttons.scss';
 import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Table';
 import { nanoid } from 'nanoid';
-import $ from 'jquery';
 import Version from '../scripts/version';
 import Big from 'big.js';
 import HTTPMethod from 'http-method-enum';
