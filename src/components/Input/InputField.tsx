@@ -32,6 +32,7 @@
  * @property {string} [inputKey] A key passed to the input element. Useful for dynamically created fields.
  * @property {boolean} [readonly] True if the field should be readonly.
  * @property {number} [tabIndex] The tab index to use for the field.
+ * @property {boolean} [zeroErrorText=false] Show error text if the field length is zero.
  */
 export type InputFieldProps = {
   name?: string;
@@ -49,6 +50,7 @@ export type InputFieldProps = {
   inputKey?: string;
   readonly?: boolean;
   tabIndex?: number;
+  zeroErrorText?: boolean;
 };
 
 /**
@@ -125,6 +127,8 @@ class InputField extends Component {
     const classes = 'input input-field ' + propsClasses.join(' ');
     const type = props.type ?? 'text';
 
+    const shouldShowError = !!((props.zeroErrorText && !this.state.currentLength || !props.zeroErrorText && this.state.currentLength) && props.error);
+
     return (
       <div className={classes}>
         {props.label && <label htmlFor={this.state.id}>{props.label}</label>}
@@ -140,7 +144,7 @@ class InputField extends Component {
           key={props.inputKey}
           tabIndex={props.readonly ? -1 : props.tabIndex}
         />
-        {props.error && 
+        {shouldShowError && 
           <p className='error error-text'>
             {props.error}
           </p>
