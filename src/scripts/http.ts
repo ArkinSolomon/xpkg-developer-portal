@@ -24,7 +24,7 @@ import HTTPMethod from 'http-method-enum';
  * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
  * @param {(err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void} cb The callback to execute after the operation completes.
  */
-export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void;
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, unknown>, cb: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): void;
 
 /**
  * Make an HTTP post request asynchronously, returning a promise. 
@@ -35,9 +35,9 @@ export function httpRequest(url: string, method: HTTPMethod, authorization: stri
  * @param {Record<string, string>} body The body of the request as on object to send as key/value pairs.
  * @return {Promise<XMLHttpRequest>} The request after it completes, or errors.
  */
-export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>): Promise<XMLHttpRequest>;
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, unknown>): Promise<XMLHttpRequest>;
 
-export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, string>, cb?: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): Promise<XMLHttpRequest> | void
+export function httpRequest(url: string, method: HTTPMethod, authorization: string | undefined, body: Record<string, unknown>, cb?: (err: ProgressEvent | undefined, response: XMLHttpRequest | undefined) => void): Promise<XMLHttpRequest> | void
 {
   if (cb) {
     const xhttp = new XMLHttpRequest();

@@ -262,7 +262,7 @@ class Packages extends Component {
         } else {
           versions.push(
             <tr key={nanoid()}>
-              <td colSpan={6}>
+              <td colSpan={7}>
                 <p>No versions</p>
               </td>
             </tr>
@@ -364,9 +364,8 @@ class Packages extends Component {
     })
       .catch(err => {
         console.error(err);
-        this.setState({
-          errorMessage: 'Could not retrieve storage data'
-        } as Partial<PackagesState>);
+        tokenStorage.delToken();
+        window.location.href = '/';
       });
   }
 

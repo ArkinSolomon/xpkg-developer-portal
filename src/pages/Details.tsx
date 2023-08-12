@@ -22,10 +22,14 @@
  * @property {[string, string][]} dependencies The dependencies of the version being modified. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
  * @property {[string, string][]} incompatibilities The incompatibilities of the version being modified. An array of tuples where the first value is the id of the package that this version is incompatible with, and the second value is the selection string of the incompatibility.
  * @property {File} [file] The file that will be re-uploaded in order to re-process.
- * @property {boolean} incompatibilityError True if there is an error with the incompatibilityList.
- * @property {boolean} isUploading True if a file is currently being uploaded.
+ * @property {boolean} isSubmitting True if anything is currently being submitted.
+ * @property {boolean} isUploading True if the a file is being re-uploaded.
  * @property {number} uploadProgress The upload progress, which is a number between 0 and 1, where 0 is 0% uploaded, and 1 is 100% uploaded. 
  * @property {string} [uploadError] A human-readable message, which is set if there was an error with the upload.
+ * @property {boolean} incompatibilityErr True if there is an error with the incompatibility list.
+ * @property {string} [popupTitle] If defined, the title to display in the popup.
+ * @property {string} [popupText] If defined, the text to display in the popup.
+ * @property {() => void} [popupAction] If defined, the action to perform after closing the popup. Only run once, then reset.
  */
 type DetailsState = {
   isLoading: boolean;
@@ -33,9 +37,14 @@ type DetailsState = {
   dependencies: [string, string][];
   incompatibilities: [string, string][];
   file?: File;
+  isSubmitting: boolean;
   isUploading: boolean;
   uploadProgress: number;
   uploadError?: string;
+  incompatibilityErr: boolean;
+  popupTitle?: string;
+  popupText?: string;
+  popupAction?: () => void;
 };
 
 import { Component, ReactNode } from 'react';
@@ -56,6 +65,7 @@ import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import LoadingBarPopup from '../components/LoadingBarPopup';
 import axios, { AxiosError } from 'axios';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
+import ConfirmPopup from '../components/ConfirmPopup';
 
 class Details extends Component {
   
@@ -63,6 +73,8 @@ class Details extends Component {
 
   private _packageData?: PackageData;
   private _versionData?: VersionData;
+
+  private _originalIncompatibilities = '[]';
 
   private _backURL?: string;
   private _backText?: string;
@@ -74,8 +86,10 @@ class Details extends Component {
       isLoading: true,
       dependencies: [],
       incompatibilities: [],
+      isSubmitting: false,
       isUploading: false,
-      uploadProgress: 0
+      uploadProgress: 0,
+      incompatibilityErr: false
     };
 
     const token = tokenStorage.checkAuth();
@@ -85,6 +99,8 @@ class Details extends Component {
       window.location.href = '/';
       return;
     }
+
+    this._updateIncompatibilities = this._updateIncompatibilities.bind(this);
   }
 
   componentDidMount(): void {
@@ -164,10 +180,13 @@ class Details extends Component {
         });
         return;
       }
-      
+
+      this._originalIncompatibilities = JSON.stringify(this._versionData.incompatibilities);
       this.setState({
         errorMessage: void (0),
-        isLoading: false
+        isLoading: false,
+        dependencies: this._versionData.dependencies,
+        incompatibilities: this._versionData.incompatibilities
       } as Partial<DetailsState>);
     });
   }
@@ -215,6 +234,7 @@ class Details extends Component {
   // The reupload didn't fail, make a reupload request for a package processing job that failed
   private async _reuploadFailed(): Promise<void> {
     this.setState({
+      isSubmitting: true,
       isUploading: true,
       uploadProgress: 0,
       uploadError: void 0
@@ -268,6 +288,7 @@ class Details extends Component {
 
       this.setState({
         uploadError: errorMessage,
+        isSubmitting: false,
         isUploading: false
       } as Partial<DetailsState>);
     }
@@ -303,7 +324,7 @@ class Details extends Component {
             <button
               type='button'
               className='primary-button'
-              disabled={!this.state.file || this.state.isUploading}
+              disabled={!this.state.file || this.state.isSubmitting}
               onClick={() => this._reuploadFailed()}
             >Upload</button>
           </div>
@@ -317,6 +338,101 @@ class Details extends Component {
     if (this.state.uploadProgress < 1)
       return `Uploading -- ${Math.round(this.state.uploadProgress)}%`;
     return 'Waiting for confirmation from registry...';
+  }
+
+  private async _updateIncompatibilities() {
+    this.setState({
+      isSubmitting: true
+    } as Partial<DetailsState>);
+
+    const { incompatibilities, dependencies } = this.state;
+    const dependencyIds = dependencies.map(d => d[0]);
+    for (let [incompatibilityId, incompatibilitySelection] of incompatibilities) {
+      incompatibilityId = incompatibilityId.trim().toLowerCase();
+      incompatibilitySelection = incompatibilitySelection.trim().toLowerCase();
+
+      const originalId = incompatibilityId;
+      if (incompatibilityId.includes('xpkg/'))
+        incompatibilityId = incompatibilityId.replace('xpkg/', '');
+
+      if (this._packageData?.packageId === incompatibilityId || this._packageData?.packageId === originalId)
+        return this.setState({
+          popupTitle: 'Incompatibility Update Error',
+          popupText: 'Package version can not be incompatible with itself.',
+          isSubmitting: false,
+        } as Partial<DetailsState>);
+      
+      if (dependencyIds.includes(incompatibilityId) || dependencyIds.includes(originalId)) {
+        return this.setState({
+          popupTitle: 'Incompatibility Update Error',
+          popupText: 'Can not have a package in both the dependency and incompatibility lists. Publish a new package with a narrower dependency selection instead.',
+          isSubmitting: false
+        } as Partial<DetailsState>);
+      }
+
+      if (incompatibilities.length > 128) {
+        return this.setState({
+          popupTitle: 'Incompatibility Update Error',
+          popupText: 'Too many incompatibilities submitted. Please contact support.',
+          isSubmitting: false
+        } as Partial<DetailsState>);
+      }
+    }
+
+    let response;
+    try {
+      response = await httpRequest(`${window.REGISTRY_URL}/packages/incompatibilities`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
+        packageId: this._packageData?.packageId as string,
+        version: this._versionData?.version as string,
+        incompatibilities
+      });
+    } catch (e) {
+      console.error(e);
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'Could not connect to the registry to update incompatibilities. Please try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
+
+    switch (response.status) {
+    case 204:
+      return this.setState({
+        popupTitle: 'Incompatibilities Updated',
+        popupText: 'Successfully updated incompatibilities.',
+        popupAction: () => window.location.reload(),
+      } as Partial<DetailsState>);
+    case 400:
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'Invalid data in incompatibility list.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    case 409:
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'Unable to uniquely identify user. Please use a different browser, log in again, or try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    case 429:
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'You are doing that too much. Wait a few seconds, and then try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    case 500:
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'You are doing that too much. Wait a few seconds, and then try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    default:
+      return this.setState({
+        popupTitle: 'Incompatibility Update Error',
+        popupText: 'An unknown error occured, please try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
   }
 
   render(): ReactNode {
@@ -348,16 +464,19 @@ class Details extends Component {
       const dependencyListProps: PackageListProps = {
         list: this.state.dependencies,
         title: 'Dependencies',
-        noneText: 'No dependencies',
-        onChange: () => this.setState({}),
+        noneText: 'No dependencies',        
         readonly: true
       };
 
       const incompatibilityListProps: PackageListProps = {
         list: this.state.incompatibilities,
+        onChange: err => {
+          this.setState({
+            incompatibilityErr: err
+          } as Partial<DetailsState>);
+        },
         title: 'Incompatibilities',
-        noneText: 'No incompatibilities',
-        readonly: true
+        noneText: 'No incompatibilities'
       };
 
       const xpSelectionFieldProps: InputFieldProps = {
@@ -376,6 +495,26 @@ class Details extends Component {
             title='Uploading'
             text={this._getLoadingBarText()}
           />
+
+          <ConfirmPopup
+            open={!!(this.state.popupText || this.state.popupTitle)}
+            title={this.state.popupTitle ?? '<NO POPUP TITLE>'}
+            confirmText='Ok'
+            showClose={false}
+            onClose={() => {
+              if (this.state.popupAction)
+                this.state.popupAction();
+
+              this.setState({
+                popupTitle: void 0,
+                popupText: void 0,
+                popupAction: void 0
+              } as Partial<DetailsState>);
+            }}
+          >
+            <p className='generic-popup-text'>{this.state.popupText ?? '<NO POPUP TEXT>'}</p>
+          </ConfirmPopup>
+
           <MainContainer>
             <MainContainerContent
               title='Version Details'
@@ -421,6 +560,15 @@ class Details extends Component {
                   </div>
                   <div className='right-half'>
                     <PackageList {...incompatibilityListProps} />
+                  </div>
+                </section>
+                <section className='mt-9 no-border'>
+                  <div className='float-right'>
+                    <button
+                      className='primary-button'
+                      disabled={this._originalIncompatibilities === JSON.stringify(this.state.incompatibilities) || this.state.incompatibilityErr || this.state.isSubmitting}
+                      onClick={this._updateIncompatibilities}
+                    >Update Incompatibilities</button>
                   </div>
                 </section>
               </>

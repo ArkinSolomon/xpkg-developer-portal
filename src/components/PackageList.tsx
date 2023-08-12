@@ -113,6 +113,7 @@ class PackageList extends Component {
           return !val || !val.length || !validateId(val);
         },
         defaultValue: packageIdValue,
+        extendOnSlash: true,
         inputKey: packageIdKey
       };
       

@@ -60,6 +60,12 @@
     display: block;
     border-radius: 5px;
     border: 1px solid $light-gray;
+
+    padding-left: 3px;
+  }
+
+  &.input-readonly input {
+    padding-left: 0;
   }
 }
 
@@ -71,7 +77,7 @@
     display: inline-block;
     margin-right: 8px;
     cursor: pointer;
-    
+
     appearance: none;
     background-color: white;
 

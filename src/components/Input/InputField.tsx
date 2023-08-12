@@ -30,9 +30,10 @@
  * @property {string} [error] Any error with the text area to display under it.
  * @property {boolean|Function<boolean>} [hiddenError] True if there is an error that has no message. The box will be outlined red.
  * @property {string} [inputKey] A key passed to the input element. Useful for dynamically created fields.
- * @property {boolean} [readonly] True if the field should be readonly.
+ * @property {boolean} [readonly=false] True if the field should be readonly.
  * @property {number} [tabIndex] The tab index to use for the field.
  * @property {boolean} [zeroErrorText=false] Show error text if the field length is zero.
+ * @property {boolean} [extendOnSlash=false] Extend the maximum character count by nine characters if a slash is typed. Useful for package identifier fields.
  */
 export type InputFieldProps = {
   name?: string;
@@ -51,17 +52,18 @@ export type InputFieldProps = {
   readonly?: boolean;
   tabIndex?: number;
   zeroErrorText?: boolean;
+  extendOnSlash?: boolean;
 };
 
 /**
  * The state of the text field.
  * 
  * @typedef {Object} InputFieldState
- * @property {number} currentLength The current length of the value of the item in the text field.
+ * @property {string} currentValue The current value of the text in the text field (trimmed).
  * @property {string} id The id of the input field, used for jQuery.
  */
 type InputFieldState = {
-   currentLength: number;
+   currentValue: string;
    id: string;
 };
 
@@ -79,7 +81,7 @@ class InputField extends Component {
     super(props);
 
     this.state = {
-      currentLength: (props.defaultValue ?? '').trim().length,
+      currentValue: (props.defaultValue ?? '').trim(),
       id: props.inputKey ?? nanoid()
     };
   }
@@ -88,28 +90,32 @@ class InputField extends Component {
     const setState = this.setState.bind(this);
 
     $(`#${this.state.id}`).on('input', function () {
-      const currentLength = ($(this).val() as string).trim().length;
+      const currentValue = $(this).val() as string;
       setState({
-        currentLength
+        currentValue
       } as InputFieldState);
     });
   }
 
   componentDidUpdate(): void {
-    const currentLength = ($(`#${this.state.id}`).val() as string).trim().length;
-    if (currentLength === this.state.currentLength)
+    const currentValue = ($(`#${this.state.id}`).val() as string).trim();
+    if (currentValue === this.state.currentValue)
       return;
     
     this.setState({
-      currentLength
+      currentValue
     } as InputFieldState);
   }
 
   render() {
     const props = this.props as InputFieldProps;
 
-    const lengthError = this.state.currentLength < (props.minLength ?? -1) ||
-      this.state.currentLength > (props.maxLength ?? Infinity);
+    let {maxLength} = props;
+    if (maxLength && props.extendOnSlash && this.state.currentValue.includes('/'))
+      maxLength += 9;
+
+    const lengthError = this.state.currentValue.length < (props.minLength ?? -1) ||
+      this.state.currentValue.length > (maxLength ?? Infinity);
     
     const hiddenError = typeof props.hiddenError === 'boolean' ? props.hiddenError : props.hiddenError?.();
     const hasError = hiddenError || props.error || lengthError;
@@ -127,7 +133,7 @@ class InputField extends Component {
     const classes = 'input input-field ' + propsClasses.join(' ');
     const type = props.type ?? 'text';
 
-    const shouldShowError = !!((props.zeroErrorText && !this.state.currentLength || !props.zeroErrorText && this.state.currentLength) && props.error);
+    const shouldShowError = !!((props.zeroErrorText && !this.state.currentValue.length || !props.zeroErrorText && this.state.currentValue.length) && props.error);
 
     return (
       <div className={classes}>
@@ -149,11 +155,11 @@ class InputField extends Component {
             {props.error}
           </p>
         }
-        {(props.maxLength || props.minLength) && <p className='max-len-counter'>
+        {(maxLength || props.minLength) && <p className='max-len-counter'>
           <span className={lengthError ? 'error' : void(0)}>
-            {this.state.currentLength}
+            {this.state.currentValue.length}
           </span>
-          /{props.maxLength}</p>}
+          /{maxLength}</p>}
       </div>
     );
   }

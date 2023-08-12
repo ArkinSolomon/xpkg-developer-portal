@@ -48,11 +48,27 @@ export function validateName(name: string): boolean {
 }
 
 /**
- * Check if a package id is valid. Same funcion as in /routes/packages.ts on the registry.
+ * Check if a package identifier is valid. Same function as in /util/validators.ts on the registry.
  * 
- * @param {string} id The package id to check.
- * @returns {boolean} True if the package id is valid, otherwise false.
+ * @param {unknown} packageId The identifier to validate.
+ * @returns {boolean} True if the identifier is valid.
  */
-export function validateId(id: string): boolean {
-  return (id && /^[a-z]([a-z]|[_\-.]|\d){5,31}$/i.test(id)) as boolean;
+export function validateId(packageId: unknown): boolean {
+  if (typeof packageId !== 'string')
+    return false;
+
+  // We declare this new variable otherwise TS complains saying packageId is unknown
+  let pId = packageId;
+  if (packageId.includes('/')) {
+    const parts = packageId.split('/');
+    const [repo] = parts;
+    pId = parts[1] as string;
+    if (!/^[a-z]{3,8}$/i.test(repo))
+      return false;
+  }
+
+  if (pId.length > 32 || pId.length < 6)
+    return false;
+
+  return /^([a-z][a-z0-9_-]*\.)*[a-z][a-z0-9_-]+$/i.test(pId);
 }
