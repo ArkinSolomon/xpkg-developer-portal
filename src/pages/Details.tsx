@@ -402,12 +402,25 @@ class Details extends Component {
         popupText: 'Successfully updated incompatibilities.',
         popupAction: () => window.location.reload(),
       } as Partial<DetailsState>);
-    case 400:
+    case 400: {
+      const humanReadableText = {
+        'invalid_form_data': 'Invalid form data.',
+        'too_many_incompatibilities': 'Incompatibility list too long.',
+        'invalid_id': 'One of the package identifiers is invalid.',
+        'invalid_version': 'The version of this package being modified is invalid.',
+        'bad_inc_tuple': 'Incompatibility list has an invalid tuple.',
+        'invalid_inc_tuple_types': 'Incompatibility list has a tuple that does not contain only strings.',
+        'invalid_inc_tuple_id': 'Incompatibility list contains an invalid package identifier.',
+        'dep_or_self_inc': 'Incompatibility list contains an declared incompatibility on itself, or a dependency.',
+        'invalid_inc_sel': 'Incompatibility has an invalid selection.',
+        'unknown': 'An unknown error occured.'
+      }[response.responseText ?? 'unknown'] ?? 'An unknown error occured.';
       return this.setState({
         popupTitle: 'Incompatibility Update Error',
-        popupText: 'Invalid data in incompatibility list.',
+        popupText: humanReadableText,
         isSubmitting: false
       } as Partial<DetailsState>);
+    }
     case 409:
       return this.setState({
         popupTitle: 'Incompatibility Update Error',
