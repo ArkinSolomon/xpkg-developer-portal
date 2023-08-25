@@ -188,7 +188,7 @@ class PackageInformation extends Component {
           isFormSubmitting: true
         } as Partial<PackageInformationState>); 
         
-        httpRequest(`${window.REGISTRY_URL}/packages/description`, HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
+        httpRequest(`${window.REGISTRY_URL}/packages/description`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
           newDescription: description,
           packageId: this.state.currentPackageData?.packageId as string
         }, (err, res) => {
@@ -252,7 +252,7 @@ class PackageInformation extends Component {
           isPopupVisible: false
         } as Partial<PackageInformationState>);
       },
-      children: <p className='generic-popup-text'>Are you sure you want to modify the description of the package?</p>
+      children: <p className='generic-popup-text'>Are you sure you want to update the description of the package?</p>
     };
 
     this.setState({
@@ -282,7 +282,7 @@ class PackageInformation extends Component {
           <button
             className='primary-button'
             onClick={() => window.location.href = `/packages/details?packageId=${this.state.currentPackageData?.packageId}&packageVersion=${version.version}&referrer=package_info`}
-          >Modify</button>
+          >Details</button>
         </div>
       </div>
     );

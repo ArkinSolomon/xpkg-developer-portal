@@ -222,7 +222,7 @@ class Account extends Component {
                         // Force a rerender of the basic information page to gray out the change button
                       } as AccountState, () => this.updateRendered(this.basicInformation()));
       
-                      httpRequest(`${window.REGISTRY_URL}/account/changeName`, HTTPMethod.PUT, tokenStorage.checkAuth() as string, {
+                      httpRequest(`${window.REGISTRY_URL}/account/changename`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
                         newName: this.state.nameValue as string,
                       }, (err, res) => {
                         if (err)

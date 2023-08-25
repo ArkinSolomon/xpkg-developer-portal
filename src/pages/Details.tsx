@@ -141,11 +141,11 @@ class Details extends Component {
     httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
       if (err)
         return this.setState({
-          errorMessage: 'An unknown error occured'
+          errorMessage: 'Could not connect to the registry'
         } as Partial<DetailsState>);
       
       if (res?.status !== 200) {
-
+        
         if (res?.status === 401) {
           tokenStorage.delToken();
           sessionStorage.setItem('post-auth-redirect', '/packages');
@@ -383,7 +383,7 @@ class Details extends Component {
     try {
       response = await httpRequest(`${window.REGISTRY_URL}/packages/incompatibilities`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
         packageId: this._packageData?.packageId as string,
-        version: this._versionData?.version as string,
+        packageVersion: this._versionData?.version as string,
         incompatibilities
       });
     } catch (e) {

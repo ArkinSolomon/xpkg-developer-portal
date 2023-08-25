@@ -248,7 +248,7 @@ class Upload extends Component {
     const formData = new FormData();
     formData.append('packageId', this.state.packageData?.packageId as string);
     formData.append('packageVersion', packageVersion);
-    formData.append('xplaneSelection', xplaneSelection);
+    formData.append('xpSelection', xplaneSelection);
     formData.append('isPublic', isPublic ? 'true' : 'false');
     formData.append('isPrivate', isPrivate ? 'true' : 'false');
     formData.append('isStored', isStored ? 'true' : 'false');
@@ -346,7 +346,7 @@ class Upload extends Component {
             linkName='Return Home'
             link='/packages'
           />}
-          {this.state.isLoading && <MainContainerLoading loadingMessage='Loading data from registry' />}
+          {this.state.isLoading && !this.state.errorMessage && <MainContainerLoading loadingMessage='Loading data from registry' />}
           {(!this.state.errorMessage && !this.state.isLoading) &&
             <MainContainerContent title='Upload a new version'>
               <Formik
