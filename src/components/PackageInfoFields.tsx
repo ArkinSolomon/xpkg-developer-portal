@@ -24,7 +24,7 @@
  */
 
 import { packageTypes } from '../pages/NewPackage';
-import { PackageType } from '../pages/Packages';
+import { PackageType } from '../scripts/author';
 import InputDropdown, { InputDropdownProps } from './Input/InputDropdown';
 import InputField, { InputFieldProps } from './Input/InputField';
 

@@ -39,7 +39,7 @@ type UploadValues = {
  * @typedef {Object} UploadState
  * @property {boolean} isLoading True if the page is fetching data from the server.
  * @property {string} [errorMessage] The message to display in an error, undefined if no error exists. 
- * @property {PackageData} [packageData] The data of the package that this page is uploading for.
+ * @property {AuthorPackageData} [packageData] The data of the package that this page is uploading for.
  * @property {boolean} isUploading True if we are currently uploading data to the server, and if the loading bar popup should be up.
  * @property {number} uploadProgress The progress of the upload, a number from 0 to 1, where 0 is 0% and 1 is 100%.
  * @property {string} [uploadError] Any error that was returned from the server during upload (human-readable).
@@ -52,7 +52,7 @@ type UploadValues = {
 type UploadState = {
   isLoading: boolean;
   errorMessage?: string;
-  packageData?: PackageData;
+  packageData?: AuthorPackageData;
   isUploading: boolean;
   uploadProgress: number;
   uploadError?: string;
@@ -65,10 +65,8 @@ type UploadState = {
 }
 
 import { Component } from 'react';
-import { httpRequest } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import HTTPMethod from 'http-method-enum';
-import { PackageData, PackageType } from './Packages';
 import Version from '../scripts/version';
 import Big from 'big.js';
 import LoadingBarPopup, { LoadingPopupConfig } from '../components/LoadingBarPopup';
@@ -83,9 +81,12 @@ import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import InputCheckbox from '../components/Input/InputCheckbox';
 import PackageList, { PackageListProps } from '../components/PackageList';
 import axios, { AxiosError } from 'axios';
-import SelectionChecker from '../scripts/selectionChecker';
+import SelectionChecker from '../scripts/versionSelection';
 import PackageInfoFields from '../components/PackageInfoFields';
 import '../css/Upload.scss';
+import { AuthorPackageData, PackageType, getAuthorPackage } from '../scripts/author';
+import RegistryError from '../scripts/registryError';
+import VersionSelection from '../scripts/versionSelection';
 
 class Upload extends Component {
   
@@ -93,7 +94,7 @@ class Upload extends Component {
 
   private _packageId?: string;
   private _defaultVersion = '1.0.0';
-  private _defaultXpSelection?: string;
+  private _defaultXpSelection = new VersionSelection('*');
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -117,7 +118,7 @@ class Upload extends Component {
     }   
   } 
 
-  componentDidMount(): void {
+  async componentDidMount(): Promise<void> {
     const searchParams = new URLSearchParams(window.location.search);
 
     if (!searchParams.has('packageId')) {
@@ -132,50 +133,17 @@ class Upload extends Component {
     let defaultDependencies: [string, string][] = [];
     let defaultIncompatibilities: [string, string][] = [];
 
-    const token = tokenStorage.checkAuth() as string;
-    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
-      if (err)
-        return this.setState({
-          errorMessage: 'An unknown error occured'
-        } as Partial<UploadState>);
-      
-      if (res?.status !== 200) {
-
-        if (res?.status === 401) {
-          tokenStorage.delToken();
-          sessionStorage.setItem('post-auth-redirect', '/packages');
-          window.location.href = '/';
-          return;
-        }
-
-        return this.setState({
-          isLoading: false,
-          errorMessage: 'An unknown error occured'
-        } as Partial<UploadState>);
-      }
-
-      const packageData = (JSON.parse(res.response) as PackageData[])
-        .find(pkg => pkg.packageId === this._packageId);
-      
-      if (!packageData) {
-        this.setState({
-          errorMessage: 'Package does not exist',
-          isLoading: false
-        });
-        return;
-      }
-      
+    try {
+      const packageData = await getAuthorPackage(this._packageId);
       packageData.versions.sort((a, b) => {
-        const aVer = Version.fromString(a.version);
-        const bVer = Version.fromString(b.version);
 
-        return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+        // Flipping a and b reverses the sort
+        return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
       });
 
       // Increment the last version as the default version
       if (packageData.versions.length) {
-        const lastVersionStr = packageData.versions[0].version;
-        const lastVersion = Version.fromString(lastVersionStr) as Version;
+        const lastVersion = packageData.versions[0].version;
 
         if (lastVersion.isPreRelease) {
           const preReleaseNum = lastVersion.preReleaseNum;
@@ -194,7 +162,9 @@ class Upload extends Component {
 
         defaultDependencies = JSON.parse(JSON.stringify(lastVersionData.dependencies)),
         defaultIncompatibilities = JSON.parse(JSON.stringify(lastVersionData.incompatibilities)); 
+   
       }
+
       
       this.setState({
         errorMessage: void (0),
@@ -203,7 +173,28 @@ class Upload extends Component {
         dependencies: defaultDependencies,
         incompatibilities: defaultIncompatibilities
       } as Partial<UploadState>);
-    });
+    } catch (e) {
+      console.error(e);
+      if (e instanceof RegistryError) {
+        switch (e.status) {
+        case 401:
+          tokenStorage.delToken();
+          sessionStorage.setItem('post-auth-redirect', '/packages');
+          window.location.href = '/';
+          return;
+        case 404:
+          return this.setState({
+            isLoading: false,
+            errorMessage: 'Package does not exist'
+          } as Partial<UploadState>);
+        default:  
+          return this.setState({
+            isLoading: false,
+            errorMessage: 'An unknown error occured'
+          } as Partial<UploadState>);
+        }
+      }
+    }
   }
 
   private _validate({ packageVersion, xplaneSelection }: UploadValues): FormikErrors<UploadValues> {
@@ -355,8 +346,8 @@ class Upload extends Component {
                 validateOnMount={true}
                 initialValues={{
                   packageId: this.state.packageData?.packageId,
-                  packageVersion: this._defaultVersion,
-                  xplaneSelection: this._defaultXpSelection,
+                  packageVersion: this._defaultVersion.toString(),
+                  xplaneSelection: this._defaultXpSelection.toString(),
                   isPublic: true,
                   isPrivate: false,
                   isStored: true
@@ -399,7 +390,7 @@ class Upload extends Component {
                     label: 'X-Plane Compatiblity',
                     placeholder: 'x.x.x-x.x.x',
                     name: 'xplaneSelection',
-                    defaultValue: this._defaultXpSelection,
+                    defaultValue: this._defaultXpSelection.toString(),
                     minLength: 1,
                     maxLength: 256,
                     error: this.state.errors.xplaneSelection

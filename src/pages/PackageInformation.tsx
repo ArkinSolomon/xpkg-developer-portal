@@ -19,7 +19,7 @@
  * @typedef {Object} PackageInformationState
  * @property {boolean} isLoading True if the page is loading.
  * @property {string} [errorMessage] The error message of the page, or undefined if the page has no error.
- * @property {PackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
+ * @property {AuthorPackageData} [currentPackageData] The current package data (not nessicarily up to date with the server).
  * @property {Partial<DescriptionValues?} descriptionErrors Any errors for the fields in the description update sub-form.
  * @property {ConfirmPopupConfig} [popupConfig] Configuration for the popup.
  * @property {boolean} isPopupVisible True if the popup is visible.
@@ -29,7 +29,7 @@
 type PackageInformationState = {
   isLoading: boolean;
   errorMessage?: string;
-  currentPackageData?: PackageData;
+  currentPackageData?: AuthorPackageData;
   descriptionErrors: Partial<DescUpdateValues>
   popupConfig?: ConfirmPopupConfig;
   isPopupVisible: boolean;
@@ -54,7 +54,7 @@ import MainContainerError from '../components/Main Container/MainContainerError'
 import MainContainerContent from '../components/Main Container/MainContainerContent';
 import * as tokenStorage from '../scripts/tokenStorage';
 import { httpRequest } from '../scripts/http';
-import { PackageData, PackageType, VersionData, getStatusTextShort } from './Packages';
+import { getStatusTextShort } from './Packages';
 import { Formik, FormikErrors } from 'formik';
 import InputArea, { InputAreaProps } from '../components/Input/InputArea';
 import '../css/PackageInformation.scss';
@@ -62,10 +62,11 @@ import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Table';
 import $ from 'jquery';
 import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
-import Version from '../scripts/version';
 import Big from 'big.js';
 import HTTPMethod from 'http-method-enum';
 import PackageInfoFields from '../components/PackageInfoFields';
+import { AuthorPackageData, AuthorVersionData, PackageType, getAuthorPackage } from '../scripts/author';
+import RegistryError from '../scripts/registryError';
 
 class PackageInformation extends Component {
 
@@ -97,7 +98,7 @@ class PackageInformation extends Component {
     this._updateDescription = this._updateDescription.bind(this);
   }
 
-  componentDidMount(): void {
+  async componentDidMount(): Promise<void> {
     const urlParams = new URLSearchParams(location.search);
     let packageId: string;
     try {
@@ -107,57 +108,43 @@ class PackageInformation extends Component {
         errorMessage: 'No package identifier provided'
       } as Partial<PackageInformationState>);
     }
-
-    const token = tokenStorage.checkAuth() as string;
-
-    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
-      if (err)
-        return this.setState({
-          errorMessage: 'An unknown error occured'
-        } as Partial<PackageInformationState>);
-      
-      if (res?.status !== 200) {
-
-        if (res?.status === 401) {
-          tokenStorage.delToken();
-          sessionStorage.setItem('post-auth-redirect', '/packages');
-          window.location.href = '/';
-          return;
-        }
-
-        return this.setState({
-          isLoading: false,
-          errorMessage: 'An unknown error occured'
-        } as Partial<PackageInformationState>);
-      }
-
-      const currentPackageData = (JSON.parse(res.response) as PackageData[])
-        .find(pkg => pkg.packageId === packageId);
-      
-      if (!currentPackageData) {
-        this.setState({
-          errorMessage: 'Package does not exist',
-          isLoading: false
-        });
-        return;
-      }
-      
+    
+    try {
+      const currentPackageData = await getAuthorPackage(packageId);
+      this._originalDesc = currentPackageData.description;
       currentPackageData.versions.sort((a, b) => {
-        const aVer = Version.fromString(a.version);
-        const bVer = Version.fromString(b.version);
 
         // Flipping a and b reverses the sort
-        return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
+        return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
       });
 
-      this._originalDesc = currentPackageData.description;
-      
       this.setState({
         errorMessage: void (0),
         isLoading: false,
         currentPackageData
       } as Partial<PackageInformationState>);
-    });
+    } catch (e) {
+      console.error(e);
+      if (e instanceof RegistryError) {
+        switch (e.status) {
+        case 401:
+          tokenStorage.delToken();
+          sessionStorage.setItem('post-auth-redirect', '/packages');
+          window.location.href = '/';
+          return;
+        case 404:
+          return this.setState({
+            isLoading: false,
+            errorMessage: 'Package does not exist'
+          } as Partial<PackageInformationState>);
+        default:  
+          return this.setState({
+            isLoading: false,
+            errorMessage: 'An unknown error occured'
+          } as Partial<PackageInformationState>);
+        }
+      }
+    }
   }
 
   private _validateDescription({ description }: DescUpdateValues): FormikErrors<DescUpdateValues> {
@@ -261,10 +248,10 @@ class PackageInformation extends Component {
     } as Partial<PackageInformationState>);
   }
 
-  private _versionSubrow(version: VersionData): JSX.Element {
+  private _versionSubrow(version: AuthorVersionData): JSX.Element {
     return (
       <div className='version-table-subrow'>
-        <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version}</h3>
+        <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version.toString()}</h3>
         <p>{version.installs} installs</p>
         <p>Checksum: {version.hash}</p>
 
@@ -309,7 +296,7 @@ class PackageInformation extends Component {
       );
     else {
 
-      const tableConfig: TableProps<VersionData> = {
+      const tableConfig: TableProps<AuthorVersionData> = {
         columns: {
           Version: 25,
           Installs: 15,
@@ -327,8 +314,8 @@ class PackageInformation extends Component {
         for (const version of this.state.currentPackageData.versions) {
 
           tableConfig.data.push([
-            version.version,
-            version.installs,
+            version.version.toString(),
+            version.installs.toString(),
             version.isPublic ? 'Yes' : 'No',
             version.isStored ? 'Yes' : 'No',
             getStatusTextShort(version.status),

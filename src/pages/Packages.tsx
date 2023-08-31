@@ -26,41 +26,6 @@ enum PackagePage {
 }
 
 /**
- * Enumeration of all possible package types. Same as in /src/packages/packageDatabase.ts on the registry.
- * 
- * @name PackageType
- * @enum {string}
- */
-export enum PackageType {
-  Aircraft = 'aircraft',
-  Executable = 'executable',
-  Scenery = 'scenery',
-  Plugin = 'plugin',
-  Livery = 'livery',
-  Other = 'other'
-}
-
-/**
- * Enumeration of all statuses for package versions. Same as in /src/packages/packageDatabase.ts on the registry. See registry source code for more information.
- * 
- * @name VersionStatus
- * @enum {string}
- */
-export enum VersionStatus {
-  Processing = 'processing', 
-  Processed = 'processed',
-  Removed = 'removed',
-  FailedMACOSX = 'failed_macosx',
-  FailedNoFileDir = 'failed_no_file_dir', 
-  FailedManifestExists = 'failed_manifest_exists', 
-  FailedInvalidFileTypes = 'failed_invalid_file_types',
-  FailedFileTooLarge = 'failed_file_too_large',
-  FailedNotEnoughSpace = 'failed_not_enough_space',
-  FailedServer = 'failed_server',
-  Aborted = 'aborted'
-}
-
-/**
  * The data for a single package which is sent to the client.
  * 
  * @typedef {Object} PackageData
@@ -127,19 +92,12 @@ export type VersionData = {
  * @property {boolean} isLoading True if the packages are currently loading.
  * @property {string} [errorMessage] Undefined if there is no error, otherwise has the error message.
  * @property {string} [successMessage] The success message passed in through the query parameters.
- * @property {Object} data The data returned from the server concerning the packages.
- * @property {PackageData[]} [packages] The packages returned from the server.
  */
 type PackagesState = {
   page: PackagePage;
   isLoading: boolean;
   errorMessage?: string;
   successMessage?: string;
-  data: {
-    packages?: PackageData[];
-    // resources?: Resource[];
-    // bug reports
-  };
 }
 
 import { Component, ReactElement, ReactNode } from 'react';
@@ -148,25 +106,23 @@ import MainContainerContent from '../components/Main Container/MainContainerCont
 import MainContainerError from '../components/Main Container/MainContainerError';
 import MainContainerLoading from '../components/Main Container/MainContainerLoading';
 import SideBar from '../components/Main Container/SideBar';
-import { httpRequest } from '../scripts/http';
 import * as tokenStorage from '../scripts/tokenStorage';
 import '../css/Packages.scss';
 import '../css/Buttons.scss';
 import '../css/SubrowStyles.scss';
 import Table, { TableProps } from '../components/Table';
 import { nanoid } from 'nanoid';
-import Version from '../scripts/version';
 import Big from 'big.js';
-import HTTPMethod from 'http-method-enum';
-import { StorageData, getStorageData } from '../scripts/registry';
+import { AuthorData, AuthorPackageData, PackageType, VersionStatus, getAllAuthorPackages, getAuthorData } from '../scripts/author';
 import StorageBar from '../components/StorageBar';
+import RegistryError from '../scripts/registryError';
 
 class Packages extends Component {
 
   state: PackagesState;
   
-  // This doesn't need to be part of the state since we get it before we finish loading anyway
-  private _storageData?: StorageData;
+  private _authorData?: AuthorData;
+  private _packageData?: AuthorPackageData[];
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -180,7 +136,6 @@ class Packages extends Component {
     this.state = {
       page: PackagePage.Packages,
       isLoading: true,
-      data: {},
       successMessage,
       errorMessage
     };
@@ -197,16 +152,15 @@ class Packages extends Component {
   private _storageBar(): JSX.Element {
     return (
       <div id='table-top-storage-disp'>
-        <StorageBar {...this._storageData as StorageData} />
+        <StorageBar {...this._authorData as AuthorData} />
       </div>
     );
   }
   
   private _packagesPage(): JSX.Element {
-    const data = [] as string[][];
-    const subrowData = [] as PackageData[];
+    const data: string[][] = [];
     
-    for (const pkg of this.state.data.packages as PackageData[]) {
+    for (const pkg of this._packageData!) {
       if (!pkg.versions.length)
         data.push([
           pkg.packageName,
@@ -218,11 +172,10 @@ class Packages extends Component {
         data.push([
           pkg.packageName,
           pkg.packageId,
-          pkg.versions[0].version,
+          pkg.versions[0].version.toString(),
           pkg.versions.length.toString(),
           pkg.description.slice(0, 9) + '...'
         ]);
-      subrowData.push(pkg);
     }
 
     // Columns and their percentage of width
@@ -237,25 +190,25 @@ class Packages extends Component {
     const tableParams = {
       columns,
       data,
-      subrowData,
+      subrowData: this._packageData,
       emptyMessage: 'No packages',
-      subrowRender: (pkg: PackageData): ReactElement => {
+      subrowRender: (pkg: AuthorPackageData): ReactElement => {
 
-        const versions = [] as JSX.Element[];
+        const versions: JSX.Element[] = [];
         if (pkg.versions.length){
           for (const version of pkg.versions) {
 
             const uploadDate = new Date(version.uploadDate);
-
+            const versionStr = version.version.toString();
             versions.push(
               <tr key={nanoid()}>
-                <td>{version.version}</td>
+                <td>{versionStr}</td>
                 <td>{version.installs}</td>
                 <td>{version.isPublic ? 'Yes' : 'No'}</td>
                 <td>{version.isStored ? 'Yes' : 'No'}</td>
                 <td>{uploadDate.toLocaleDateString()} { uploadDate.toLocaleTimeString() }</td>
                 <td>{getStatusTextShort(version.status)}</td>
-                <td><a className='subtable-link' href={`/packages/details?packageId=${version.packageId}&packageVersion=${version.version}`}>Details</a></td>
+                <td><a className='subtable-link' href={`/packages/details?packageId=${pkg.packageId}&packageVersion=${versionStr}`}>Details</a></td>
               </tr>
             );
           }
@@ -302,7 +255,7 @@ class Packages extends Component {
           </div>
         );
       }
-    } as TableProps<PackageData>;
+    } as TableProps<AuthorPackageData>;
 
     return (
 
@@ -320,53 +273,33 @@ class Packages extends Component {
     );
   }
 
-  componentDidMount(): void {
-    getStorageData().then(data => {
-      this._storageData = data;
-      const token = tokenStorage.checkAuth() as string;
-      httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
-        if (err)
-          return this.setState({
-            errorMessage: 'An unknown error occured'
-          } as Partial<PackagesState>);
-      
-        if (res?.status !== 200) {
-          const errorMessage = 'An unknown error occured';
+  async componentDidMount(): Promise<void> {
+    try {
+      [this._authorData, this._packageData] = await Promise.all([
+        getAuthorData(),
+        getAllAuthorPackages()
+      ]);
 
-          if (res?.status === 401) {
-            tokenStorage.delToken();
-            window.location.href = '/';
-          }
-
-          return this.setState({ errorMessage } as Partial<PackagesState>);
-        }
-
-        // We need to spread so that we can update the sub properties (data.packages instead of updating data all at once)
-        const data = { ...this.state.data };
-        data.packages = JSON.parse(res.response);
-
-        data.packages?.forEach(pkg => {
-          pkg.versions.sort((a, b) => {
-            const aVer = Version.fromString(a.version);
-            const bVer = Version.fromString(b.version);
-
-            // Flipping a and b reverses the sort
-            return bVer?.toFloat().cmp(aVer?.toFloat() as Big).valueOf() as number;
-          });
+      this._packageData.forEach(pkg => {
+        pkg.versions.sort((a, b) => {
+          return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
         });
-
-        this.setState({
-          errorMessage: void (0),
-          isLoading: false,
-          data
-        } as Partial<PackagesState>);
       });
-    })
-      .catch(err => {
-        console.error(err);
+
+      this.setState({
+        isLoading: false
+      } as Partial<PackagesState>);
+    } catch (e) {
+      console.error(e);
+      this.setState({
+        errorMessage: 'Could not retrieve data from the registry.'
+      } as Partial<PackagesState>);
+
+      if (e instanceof RegistryError && e.status === 401) {
         tokenStorage.delToken();
         window.location.href = '/';
-      });
+      }
+    }
   }
 
   render(): ReactNode {
@@ -409,7 +342,7 @@ class Packages extends Component {
               return (
                 <MainContainerError
                   message={this.state.errorMessage}
-                  linkName='Return Home'
+                  linkName='Try Again'
                   link='/packages'
                 />
               );

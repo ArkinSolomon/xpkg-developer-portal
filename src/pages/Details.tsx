@@ -21,6 +21,8 @@
  * @property {string} [errorMessage] Any errors that occured while fetching package data. If not undefined, it will display the error page with this message.
  * @property {[string, string][]} dependencies The dependencies of the version being modified. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
  * @property {[string, string][]} incompatibilities The incompatibilities of the version being modified. An array of tuples where the first value is the id of the package that this version is incompatible with, and the second value is the selection string of the incompatibility.
+ * @property {string} xpSelectionStr The X-Plane version selection (not parsed).
+ * @property {VersionSelection} xpSelection The parsed X-Plane version selection.
  * @property {File} [file] The file that will be re-uploaded in order to re-process.
  * @property {boolean} isSubmitting True if anything is currently being submitted.
  * @property {boolean} isUploading True if the a file is being re-uploaded.
@@ -36,6 +38,8 @@ type DetailsState = {
   errorMessage?: string;
   dependencies: [string, string][];
   incompatibilities: [string, string][];
+  xpSelectionStr: string;
+  xpSelection: VersionSelection;
   file?: File;
   isSubmitting: boolean;
   isUploading: boolean;
@@ -52,7 +56,6 @@ import * as tokenStorage from '../scripts/tokenStorage';
 import Version from '../scripts/version';
 import { downloadFile, httpRequest } from '../scripts/http';
 import HTTPMethod from 'http-method-enum';
-import { PackageData, PackageType, VersionData, VersionStatus } from './Packages';
 import MainContainer from '../components/Main Container/MainContainer';
 import MainContainerContent from '../components/Main Container/MainContainerContent';
 import MainContainerLoading from '../components/Main Container/MainContainerLoading';
@@ -66,15 +69,18 @@ import LoadingBarPopup from '../components/LoadingBarPopup';
 import axios, { AxiosError } from 'axios';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import ConfirmPopup from '../components/ConfirmPopup';
+import { AuthorSingleVersionPackageData, PackageType, VersionStatus, getAuthorPackageVersion } from '../scripts/author';
+import RegistryError from '../scripts/registryError';
+import VersionSelection from '../scripts/versionSelection';
 
 class Details extends Component {
   
   state: DetailsState;
 
-  private _packageData?: PackageData;
-  private _versionData?: VersionData;
+  private _data?: AuthorSingleVersionPackageData;
 
   private _originalIncompatibilities = '[]';
+  private _originalSelection = '*';
 
   private _backURL?: string;
   private _backText?: string;
@@ -89,7 +95,9 @@ class Details extends Component {
       isSubmitting: false,
       isUploading: false,
       uploadProgress: 0,
-      incompatibilityErr: false
+      incompatibilityErr: false,
+      xpSelectionStr: '*',
+      xpSelection: new VersionSelection('*')
     };
 
     const token = tokenStorage.checkAuth();
@@ -101,9 +109,10 @@ class Details extends Component {
     }
 
     this._updateIncompatibilities = this._updateIncompatibilities.bind(this);
+    this._updateXpSelection = this._updateXpSelection.bind(this);
   }
 
-  componentDidMount(): void {
+  async componentDidMount() {
     const urlParams = new URLSearchParams(location.search);
     let packageId: string;
     let version: string;
@@ -113,7 +122,7 @@ class Details extends Component {
       version = urlParams.get('packageVersion')?.trim().toLowerCase() as string;
     } catch (e) {
       return this.setState({
-        errorMessage: 'Invalid package identifier or version provided'
+        errorMessage: 'Invalid package identifier or version provided.'
       } as Partial<DetailsState>);
     }
 
@@ -132,77 +141,64 @@ class Details extends Component {
 
     if (!Version.fromString(version)) {
       return this.setState({
-        errorMessage: 'Invalid version provided'
+        errorMessage: 'Invalid version provided.'
       } as Partial<DetailsState>);
     }
 
-    const token = tokenStorage.checkAuth() as string;
-
-    httpRequest(`${window.REGISTRY_URL}/account/packages`, HTTPMethod.GET, token , { }, (err, res) => {
-      if (err)
-        return this.setState({
-          errorMessage: 'Could not connect to the registry'
-        } as Partial<DetailsState>);
+    try {
+      this._data = await getAuthorPackageVersion(packageId, version);
       
-      if (res?.status !== 200) {
-        
-        if (res?.status === 401) {
+      this._originalSelection = this._data.versionData.xpSelection.toString();
+      this._originalIncompatibilities = JSON.stringify(this._data.versionData.incompatibilities);
+      this.setState({
+        errorMessage: void (0),
+        isLoading: false,
+        dependencies: this._data.versionData.dependencies,
+        incompatibilities: this._data.versionData.incompatibilities,
+        xpSelectionStr: this._data?.versionData.xpSelection.toString()
+      } as Partial<DetailsState>);
+    } catch (e) {
+      console.error(e);
+      let errorMessage = 'An unknown error occured.';
+      if (e instanceof RegistryError) {
+        switch (e.status) {
+        case 400:
+          errorMessage = 'Invalid package identifier or version provided.';
+          break;
+        case 401:
           tokenStorage.delToken();
           sessionStorage.setItem('post-auth-redirect', '/packages');
           window.location.href = '/';
           return;
+        case 404:
+          errorMessage = 'Package version not found.';
+          break;
+        case 409:
+        case 429:
+          errorMessage = 'You are doing that too much. Please try again later.';
+          break;
+        case 500:
+          errorMessage = 'Internal server error. Please try again later.';
+          break;  
         }
-
-        return this.setState({
-          isLoading: false,
-          errorMessage: 'An unknown error occured'
-        } as Partial<DetailsState>);
       }
 
-      this._packageData = (JSON.parse(res.response) as PackageData[])
-        .find(pkg => pkg.packageId === packageId);
-      
-      if (!this._packageData) {
-        this.setState({
-          errorMessage: 'Package does not exist',
-          isLoading: false
-        });
-        return;
-      }
-
-      this._versionData = this._packageData.versions
-        .find(v => v.version === version);
-      
-      if (!this._versionData) {
-        this.setState({
-          errorMessage: 'Package version does not exist',
-          isLoading: false
-        });
-        return;
-      }
-
-      this._originalIncompatibilities = JSON.stringify(this._versionData.incompatibilities);
-      this.setState({
-        errorMessage: void (0),
-        isLoading: false,
-        dependencies: this._versionData.dependencies,
-        incompatibilities: this._versionData.incompatibilities
-      } as Partial<DetailsState>);
-    });
+      this.setState({ errorMessage } as Partial<DetailsState>);
+    }
   }
 
   private _getMetaText(): JSX.Element {
-    switch (this._versionData?.status) {
+    switch (this._data?.versionData.status) {
     case VersionStatus.Processing:
       return (<p>This package is still processing. Check again later.</p>);
     case VersionStatus.Processed:
       return (
         <>
-          <p>Installs: <b>{this._versionData.installs}</b></p>
-          <p>Checksum: <b>{this._versionData.hash}</b></p>
-          <p>Uploaded: <b>{this._versionData.uploadDate.toLocaleString()}</b></p>
-          <p>Package Size: <b>{getBestUnits(this._versionData.size)} ({this._versionData.size} bytes)</b></p>
-          <p>Installed Size: <b>{getBestUnits(this._versionData.installedSize)} ({this._versionData.installedSize} bytes)</b></p>
+          <p>Installs: <b>{this._data.versionData.installs}</b></p>
+          <p>Checksum: <b>{this._data.versionData.hash}</b></p>
+          <p>Uploaded: <b>{this._data.versionData.uploadDate.toLocaleString()}</b></p>
+          <p>Package Size: <b>{getBestUnits(this._data.versionData.size)} ({this._data.versionData.size} bytes)</b></p>
+          <p>Installed Size: <b>{getBestUnits(this._data.versionData.installedSize)} ({this._data.versionData.installedSize} bytes)</b></p>
         </>
       );
     case VersionStatus.Removed:
@@ -212,7 +208,7 @@ class Details extends Component {
     case VersionStatus.FailedFileTooLarge:
       return (<p>The uploaded zip can not grow to be more than 16 GiB in size.</p>);
     case VersionStatus.FailedInvalidFileTypes:
-      if (this._packageData?.packageType === PackageType.Executable)
+      if (this._data?.packageType === PackageType.Executable)
         return (<p>The uploaded zip file may not contain symbolic links.</p>);
       else
         return (<p>The uploaded zip file may not contain symbolic links or executables.</p>);
@@ -221,13 +217,13 @@ class Details extends Component {
     case VersionStatus.FailedManifestExists:
       return (<p>You can not have a file named <b>manifest.json</b> in your zip file root.</p>);
     case VersionStatus.FailedNoFileDir:
-      return (<p>No directory was present with the package id <b>{this._packageData?.packageId}</b>. Ensure your directory structure is correct, and then try again.</p>);
+      return (<p>No directory was present with the package id <b>{this._data.packageId}</b>. Ensure your directory structure is correct, and then try again.</p>);
     case VersionStatus.FailedNotEnoughSpace:
       return (<p>You do not own enough storage space to store the package file. Purchase more storage space in order to upload more packages or versions.</p>);
     case VersionStatus.FailedServer:
       return (<p>There was a server error packaging the file.</p>);
     default:
-      return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{ this._versionData?.status }</b>. This may be a bug.</p>);
+      return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{ this._data?.versionData.status }</b>. This may be a bug.</p>);
     }
   }
 
@@ -241,8 +237,8 @@ class Details extends Component {
     } as Partial<DetailsState>);
 
     const formData = new FormData();
-    formData.append('packageId', this._packageData?.packageId as string);
-    formData.append('packageVersion', this._versionData?.version as string);
+    formData.append('packageId', this._data?.packageId as string);
+    formData.append('packageVersion', this._data!.versionData.version.toString());
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formData.append('file', (document.getElementById('package-file') as any).files[0]);
@@ -270,12 +266,11 @@ class Details extends Component {
         switch (e.response?.status) {
         case 400:
           errorMessage = {
-            no_file: 'No file was provided.',
-            missing_form_data: 'Missing form data.',
-            invalid_form_data: 'Invalid form data provided.',
-            invalid_version: 'The version provided is invalid.',
-            no_package: 'The package does not exist.',
-            no_version: 'The package at the specified version version does not exist.',
+            invalid_or_empty_str: 'Invalid or empty string.',
+            no_file: 'File not provided.',
+            invalid_id_or_repo: 'Bad identifier, or wrong repository.',
+            invalid_version: 'Invalid version format.',
+            version_not_exist: 'The package does not contain the provided version.',
             cant_retry: 'You can not re-upload this package version.'
           }[e.response?.data as string]
               ?? `An unknown error occured [${e.response?.data}].`;
@@ -295,7 +290,7 @@ class Details extends Component {
   }
 
   private _reuploadSection(): JSX.Element {
-    const status = this._versionData?.status as VersionStatus;
+    const status = this._data?.versionData.status as VersionStatus;
     if (status !== VersionStatus.Processed && status !== VersionStatus.Processing) {
 
       const fileUploadProps: InputFileProps = {
@@ -340,6 +335,89 @@ class Details extends Component {
     return 'Waiting for confirmation from registry...';
   }
 
+  private async _updateXpSelection() {
+    this.setState({
+      isSubmitting: true
+    } as Partial<DetailsState>);
+
+    if (!this.state.xpSelection.isValid) {
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'Invalid X-Plane selection provided.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
+
+    let response;
+    try {
+      response = await httpRequest(`${window.REGISTRY_URL}/packages/xpselection`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
+        packageId: this._data?.packageId as string,
+        packageVersion: this._data?.versionData.version.toString(),
+        xpSelection: this.state.xpSelection.toString()
+      });
+    } catch (e) {
+      console.error(e);
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'Could not connect to the registry to update the X-Plane selection. Please try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
+
+    switch (response.status) {
+    case 204:
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Updated',
+        popupText: 'Successfully updated the X-Plane version selection.',
+        popupAction: () => window.location.reload(),
+      } as Partial<DetailsState>);
+    case 400: {
+      const humanReadableText = {
+        invalid_or_empty_str: 'Invalid or empty string.',
+        invalid_id_or_repo: 'Bad identifier, or wrong repository.',
+        invalid_selection: 'X-Plane selection provided is invalid.',
+        bad_sel_len: 'X-Plane version selection provided is too long',
+        invalid_version: 'The version of this package being modified is invalid.',
+        unknown: 'An unknown error occured.'
+      }[response.responseText ?? 'unknown'] ?? 'An unknown error occured.';
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: humanReadableText,
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
+    case 401:
+      tokenStorage.delToken();
+      sessionStorage.setItem('post-auth-redirect', '/packages');
+      window.location.href = '/';
+      return;
+    case 409:
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'Unable to uniquely identify user. Please use a different browser, log in again, or try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    case 429:
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'You are doing that too much. Wait a few seconds, and then try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    case 500:
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'You are doing that too much. Wait a few seconds, and then try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    default:
+      return this.setState({
+        popupTitle: 'X-Plane Version Selection Update Error',
+        popupText: 'An unknown error occured, please try again later.',
+        isSubmitting: false
+      } as Partial<DetailsState>);
+    }
+  }
+
   private async _updateIncompatibilities() {
     this.setState({
       isSubmitting: true
@@ -355,7 +433,7 @@ class Details extends Component {
       if (incompatibilityId.includes('xpkg/'))
         incompatibilityId = incompatibilityId.replace('xpkg/', '');
 
-      if (this._packageData?.packageId === incompatibilityId || this._packageData?.packageId === originalId)
+      if (this._data?.packageId === incompatibilityId || this._data?.packageId === originalId)
         return this.setState({
           popupTitle: 'Incompatibility Update Error',
           popupText: 'Package version can not be incompatible with itself.',
@@ -382,8 +460,8 @@ class Details extends Component {
     let response;
     try {
       response = await httpRequest(`${window.REGISTRY_URL}/packages/incompatibilities`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
-        packageId: this._packageData?.packageId as string,
-        packageVersion: this._versionData?.version as string,
+        packageId: this._data?.packageId as string,
+        packageVersion: this._data?.versionData.version.toString(),
         incompatibilities
       });
     } catch (e) {
@@ -404,16 +482,17 @@ class Details extends Component {
       } as Partial<DetailsState>);
     case 400: {
       const humanReadableText = {
-        'invalid_form_data': 'Invalid form data.',
-        'too_many_incompatibilities': 'Incompatibility list too long.',
-        'invalid_id': 'One of the package identifiers is invalid.',
-        'invalid_version': 'The version of this package being modified is invalid.',
-        'bad_inc_tuple': 'Incompatibility list has an invalid tuple.',
-        'invalid_inc_tuple_types': 'Incompatibility list has a tuple that does not contain only strings.',
-        'invalid_inc_tuple_id': 'Incompatibility list contains an invalid package identifier.',
-        'dep_or_self_inc': 'Incompatibility list contains an declared incompatibility on itself, or a dependency.',
-        'invalid_inc_sel': 'Incompatibility has an invalid selection.',
-        'unknown': 'An unknown error occured.'
+        invalid_or_empty_str: 'Invalid or empty string.',
+        too_many_incompatibilities: 'Incompatibility list too long.',
+        invalid_id_or_repo: 'Bad identifier, or wrong repository.',
+        invalid_version: 'The version of this package being modified is invalid.',
+        bad_inc_arr: 'Too many incompatibilities provided.',
+        bad_inc_tuple: 'Incompatibility list has an invalid tuple.',
+        invalid_inc_tuple_types: 'Incompatibility list has a tuple that does not contain only strings.',
+        invalid_inc_tuple_id: 'Incompatibility list contains an invalid package identifier.',
+        dep_or_self_inc: 'Incompatibility list contains an declared incompatibility on itself, or a dependency.',
+        invalid_inc_sel: 'Incompatibility has an invalid selection.',
+        unknown: 'An unknown error occured.'
       }[response.responseText ?? 'unknown'] ?? 'An unknown error occured.';
       return this.setState({
         popupTitle: 'Incompatibility Update Error',
@@ -421,6 +500,11 @@ class Details extends Component {
         isSubmitting: false
       } as Partial<DetailsState>);
     }
+    case 401: 
+      tokenStorage.delToken();
+      sessionStorage.setItem('post-auth-redirect', '/packages');
+      window.location.href = '/';
+      return;
     case 409:
       return this.setState({
         popupTitle: 'Incompatibility Update Error',
@@ -467,7 +551,7 @@ class Details extends Component {
         </MainContainer>
       );
     } else {
-      if (!this._versionData ) {
+      if (!this._data?.versionData ) {
         this.setState({
           errorMessage: 'Version data not found on client'
         } as Partial<DetailsState>);
@@ -495,9 +579,17 @@ class Details extends Component {
       const xpSelectionFieldProps: InputFieldProps = {
         classes: ['w-full'],
         label: 'X-Plane Selection',
-        placeholder: '<unknown selection>',
-        defaultValue: this._versionData?.xpSelection,
-        readonly: true
+        placeholder: 'x.x.x-x.x.x',
+        defaultValue: this._data?.versionData.xpSelection.toString(),
+        hiddenError: !this.state.xpSelection.isValid,
+        minLength: 0,
+        maxLength: 256,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+          this.setState({
+            xpSelectionStr: e.target.value,
+            xpSelection: new VersionSelection(e.target.value)
+          } as Partial<DetailsState>);
+        }
       };
 
       return (
@@ -536,24 +628,24 @@ class Details extends Component {
             >
               <>
                 <PackageInfoFields
-                  packageId={this._versionData.packageId}
-                  packageName={this._packageData?.packageName as string}
-                  packageType={this._packageData?.packageType as PackageType}
-                  packageVersion={this._versionData.version}
+                  packageId={this._data.packageId}
+                  packageName={this._data?.packageName as string}
+                  packageType={this._data?.packageType as PackageType}
+                  packageVersion={this._data.versionData.version.toString()}
                 />
                 <section className='mt-7'>
                   <div id='version-meta'>
                     {this._getMetaText()}
                     <aside id='action-buttons'>
                       {
-                        this._versionData.isStored && this._versionData.status === VersionStatus.Processed &&
+                        this._data.versionData.isStored && this._data.versionData.status === VersionStatus.Processed &&
                       <>
                         <button
-                          onClick={() => downloadFile(this._versionData?.loc as string, `${this._versionData?.packageId}@${this._versionData?.version}`)}
+                          onClick={() => downloadFile(this._data?.versionData.loc as string, `${this._data?.packageId}@${this._data?.versionData.version}`)}
                           className='primary-button'
                         >Download Package File</button>
                         <button
-                          onClick={() => downloadInstallationFile(this._packageData?.packageId as string, this._versionData?.version as string, this._versionData?.privateKey)}
+                          onClick={() => downloadInstallationFile(this._data!.packageId, this._data!.versionData.version.toString()!, this._data?.versionData.privateKey)}
                           className='primary-button'
                         >Download Installation File</button>
                       </>
@@ -565,6 +657,11 @@ class Details extends Component {
                 <section className='mt-7 no-border'>
                   <div className='left-half'>
                     <InputField {...xpSelectionFieldProps} />
+                    <button
+                      className='primary-button mt-6 float-right'
+                      disabled={this.state.isSubmitting || !this.state.xpSelection.isValid || this._originalSelection === this.state.xpSelection.toString()}
+                      onClick={this._updateXpSelection}
+                    >Update X-Plane Selection</button>
                   </div>
                 </section>
                 <section className='mt-11'>     

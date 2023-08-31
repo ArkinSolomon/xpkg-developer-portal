@@ -13,11 +13,13 @@
  * either express or implied limitations under the License.
  */
 
-import { StorageData } from '../scripts/registry';
 import {getBestUnits} from '../scripts/displayUtil';
 import '../css/StorageBar.scss';
 
-function StorageBar(props: StorageData) {
+function StorageBar(props: {
+  totalStorage: number;
+  usedStorage: number;
+}) {
   let storageUsageClass = 'okay';
   if (props.usedStorage / props.totalStorage > 0.9)
     storageUsageClass = 'near-full';

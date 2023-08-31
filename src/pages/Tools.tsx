@@ -20,7 +20,7 @@ import { Formik } from 'formik';
 import InputField, { InputFieldProps } from '../components/Input/InputField';
 import '../css/Tools.scss';
 import Version from '../scripts/version';
-import SelectionChecker from '../scripts/selectionChecker';
+import SelectionChecker from '../scripts/versionSelection';
 
 /**
  * An enumeration for all of the different tools available.

@@ -39,7 +39,7 @@ import InputField, { InputFieldProps } from './Input/InputField';
 import '../css/PackageList.scss';
 import { Component, ReactNode } from 'react';
 import $ from 'jquery';
-import SelectionChecker from '../scripts/selectionChecker';
+import SelectionChecker from '../scripts/versionSelection';
 import { validateId } from '../scripts/validators';
 
 // Using state here will cause the text fields to loose focus

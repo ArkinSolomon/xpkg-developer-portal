@@ -13,7 +13,7 @@
  * either express or implied limitations under the License.
  */
 
-// How selection checking works.
+// How version selection works.
 // 
 // This process basically works by taking a version and converting it to a 
 // float. This float is defined initially by taking the values for the major, 
@@ -56,6 +56,7 @@
 // floating point errors. If speed becomes a problem, it might be worth looking
 // into performing these operations using native numbers.
 
+
 /**
  * This is a specific range from one version to another. If the values of min and max are equal, it represents a single version range.
  * 
@@ -72,13 +73,13 @@ type VersionRange = {
   maxVersion: Version;
 };
 
-import Big from 'big.js';
+import { Big } from 'big.js';
 import Version from './version';
 
 /**
- * This class creates a checker to check if a version matches a selection.
+ * This class version selection from a string, and can use it with other version selections, or versions.
  */
-export default class SelectionChecker {
+export default class VersionSelection {
 
   private _isValid = true;
   private _ranges: VersionRange[] = [];
@@ -102,7 +103,7 @@ export default class SelectionChecker {
   }
 
   /**
-   * Create a new selection checker from a string.
+   * Create a new version selection from a string.
    * 
    * @param {string} selectionStr The selection string, comma separated.
    */
@@ -211,7 +212,7 @@ export default class SelectionChecker {
 
       this._ranges.push(range);
     }
-
+    
     if (!this._isValid)
       return;
     
@@ -243,6 +244,35 @@ export default class SelectionChecker {
         return true;
     }
     return false;
+  }
+
+  /**
+   * Get a simplified string representation of the version selection.
+   * 
+   * @returns {string} A simplified string representation of the version selection.
+   */
+  toString(): string {
+    let rangeStrings: string[] = [];
+
+    if (!this._ranges.length) 
+      return '<empty version select>';
+
+    for (const range of this._ranges) {
+      if (range.minVersion.equals(range.maxVersion))
+        rangeStrings.push(range.minVersion.asMinString());
+      else if (range.minVersion.equals(Version.MIN_VERSION) && range.maxVersion.equals(Version.MAX_VERSION))
+        return '*';
+      else if (range.minVersion.equals(Version.MIN_VERSION))
+        rangeStrings = ['-' + range.maxVersion.asMaxString()];
+      else if (range.maxVersion.equals(Version.MAX_VERSION)) {
+        rangeStrings.push(range.minVersion.asMinString() + '-');
+        break;
+      }
+      else
+        rangeStrings.push(`${range.minVersion.asMinString()}-${range.maxVersion.asMaxString()}`);
+    }
+
+    return rangeStrings.join(',');
   }
 }
 
