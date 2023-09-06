@@ -187,13 +187,13 @@ class Upload extends Component {
             isLoading: false,
             errorMessage: 'Package does not exist'
           } as Partial<UploadState>);
-        default:  
-          return this.setState({
-            isLoading: false,
-            errorMessage: 'An unknown error occured'
-          } as Partial<UploadState>);
         }
       }
+
+      return this.setState({
+        isLoading: false,
+        errorMessage: 'An unknown error occured'
+      } as Partial<UploadState>);
     }
   }
 

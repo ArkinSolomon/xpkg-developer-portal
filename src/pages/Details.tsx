@@ -72,6 +72,7 @@ import ConfirmPopup from '../components/ConfirmPopup';
 import { AuthorSingleVersionPackageData, PackageType, VersionStatus, getAuthorPackageVersion } from '../scripts/author';
 import RegistryError from '../scripts/registryError';
 import VersionSelection from '../scripts/versionSelection';
+import PackageInformation from './PackageInformation';
 
 class Details extends Component {
   
@@ -635,7 +636,7 @@ class Details extends Component {
                 />
                 <section className='mt-7'>
                   <div id='version-meta'>
-                    {this._getMetaText()}
+                    {PackageInformation.getVersionInfoText(this._data.packageId, this._data.packageType, this._data.versionData)}
                     <aside id='action-buttons'>
                       {
                         this._data.versionData.isStored && this._data.versionData.status === VersionStatus.Processed &&

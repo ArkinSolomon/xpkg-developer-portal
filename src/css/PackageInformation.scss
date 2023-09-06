@@ -66,3 +66,23 @@ p.package-list-empty {
   margin-bottom: -15px;
   color: $gray;
 }
+
+.version-meta-text {
+  b {
+    font-weight: 500;
+    font-kerning: none;
+  }
+
+  p {
+    margin-bottom: 0.2em;
+
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+  }
+
+  p,
+  b {
+    color: $dark-gray;
+  }
+}

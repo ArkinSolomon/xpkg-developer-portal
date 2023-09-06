@@ -65,8 +65,9 @@ import ConfirmPopup, { ConfirmPopupConfig } from '../components/ConfirmPopup';
 import Big from 'big.js';
 import HTTPMethod from 'http-method-enum';
 import PackageInfoFields from '../components/PackageInfoFields';
-import { AuthorPackageData, AuthorVersionData, PackageType, getAuthorPackage } from '../scripts/author';
+import { AuthorPackageData, AuthorVersionData, PackageType, VersionStatus, getAuthorPackage } from '../scripts/author';
 import RegistryError from '../scripts/registryError';
+import { getBestUnits } from '../scripts/displayUtil';
 
 class PackageInformation extends Component {
 
@@ -100,7 +101,7 @@ class PackageInformation extends Component {
 
   async componentDidMount(): Promise<void> {
     const urlParams = new URLSearchParams(location.search);
-    let packageId: string;
+    let packageId;
     try {
       packageId = urlParams.get('packageId')?.toLowerCase() as string;
     } catch (e) {
@@ -137,13 +138,13 @@ class PackageInformation extends Component {
             isLoading: false,
             errorMessage: 'Package does not exist'
           } as Partial<PackageInformationState>);
-        default:  
-          return this.setState({
-            isLoading: false,
-            errorMessage: 'An unknown error occured'
-          } as Partial<PackageInformationState>);
         }
       }
+
+      return this.setState({
+        isLoading: false,
+        errorMessage: 'An unknown error occured'
+      } as Partial<PackageInformationState>);
     }
   }
 
@@ -251,9 +252,7 @@ class PackageInformation extends Component {
   private _versionSubrow(version: AuthorVersionData): JSX.Element {
     return (
       <div className='version-table-subrow'>
-        <h3>{this.state.currentPackageData?.packageName} &#8212; {version.version.toString()}</h3>
-        <p>{version.installs} installs</p>
-        <p>Checksum: {version.hash}</p>
+        {PackageInformation.getVersionInfoText(this.state.currentPackageData!.packageId, this.state.currentPackageData!.packageType, version)}
 
         {
           !version.isPublic && 
@@ -403,6 +402,55 @@ class PackageInformation extends Component {
         </MainContainer>
       );   
     }
+  }
+
+  static getVersionInfoText(packageId: string, packageType: PackageType, version: AuthorVersionData): JSX.Element {
+    const innerHtml = (() => {
+      switch (version.status) {
+      case VersionStatus.Processing:
+        return (<p>This package is still processing. Check again later.</p>);
+      case VersionStatus.Processed:
+        return (
+          <>
+            <p>Installs: <b>{version.installs}</b></p>
+            <p>Checksum: <b>{version.hash?.toUpperCase()}</b></p>
+            <p>Uploaded: <b>{version.uploadDate.toLocaleString()}</b></p>
+            <p>Package Size: <b>{getBestUnits(version.size)} ({version.size} bytes)</b></p>
+            <p>Installed Size: <b>{getBestUnits(version.installedSize)} ({version.installedSize} bytes)</b></p>
+          </>
+        );
+      case VersionStatus.Removed:
+        return (<p>This version has been removed from the registry. Please contact support.</p>);
+      case VersionStatus.Aborted:
+        return (<p>Processing of this version was aborted. There may have been a server error, or your package took too long to process. Please try again.</p>);
+      case VersionStatus.FailedFileTooLarge:
+        return (<p>The uploaded zip can not grow to be more than 16 GiB in size.</p>);
+      case VersionStatus.FailedInvalidFileTypes:
+        if (packageType === PackageType.Executable)
+          return (<p>The uploaded zip file may not contain symbolic links.</p>);
+        else
+          return (<p>The uploaded zip file may not contain symbolic links or executables.</p>);
+      case VersionStatus.FailedMACOSX:
+        return (<p>You only have a __MACOSX directory in your uploaded zip. Ensure your directory structure is correct, and then try again.</p>);
+      case VersionStatus.FailedManifestExists:
+        return (<p>You can not have a file named <b>manifest.json</b> in your zip file root.</p>);
+      case VersionStatus.FailedNoFileDir:
+        return (<p>No directory was present with the package identifier, <b>{packageId}</b>. Ensure your directory structure is correct, and then try again.</p>);
+      case VersionStatus.FailedNotEnoughSpace:
+        return (<p>You do not own enough storage space to store the package file. Purchase more storage space in order to upload more packages or versions.</p>);
+      case VersionStatus.FailedServer:
+        return (<p>There was a server error packaging the file.</p>);
+      default:
+        return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{version.status}</b>. This may be a bug.</p>);
+      }
+    }
+    )();
+
+    return (
+      <div className='version-meta-text'>
+        {innerHtml}
+      </div>
+    );
   }
 }
 
