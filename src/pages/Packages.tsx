@@ -172,7 +172,7 @@ class Packages extends Component {
         data.push([
           pkg.packageName,
           pkg.packageId,
-          pkg.versions[0].version.toString(),
+          pkg.versions[0].packageVersion.toString(),
           pkg.versions.length.toString(),
           pkg.description.slice(0, 9) + '...'
         ]);
@@ -199,11 +199,11 @@ class Packages extends Component {
           for (const version of pkg.versions) {
 
             const uploadDate = new Date(version.uploadDate);
-            const versionStr = version.version.toString();
+            const versionStr = version.packageVersion.toString();
             versions.push(
               <tr key={nanoid()}>
                 <td>{versionStr}</td>
-                <td>{version.installs}</td>
+                <td>{version.downloads}</td>
                 <td>{version.isPublic ? 'Yes' : 'No'}</td>
                 <td>{version.isStored ? 'Yes' : 'No'}</td>
                 <td>{uploadDate.toLocaleDateString()} { uploadDate.toLocaleTimeString() }</td>
@@ -239,7 +239,7 @@ class Packages extends Component {
                 <thead>
                   <tr>
                     <th>Version</th>
-                    <th>Installs</th>
+                    <th>Downloads</th>
                     <th>Public</th>
                     <th>Stored</th>
                     <th>Uploaded</th>
@@ -282,7 +282,7 @@ class Packages extends Component {
 
       this._packageData.forEach(pkg => {
         pkg.versions.sort((a, b) => {
-          return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
+          return b.packageVersion.toFloat().cmp(a.packageVersion.toFloat() as Big).valueOf() as number;
         });
       });
 

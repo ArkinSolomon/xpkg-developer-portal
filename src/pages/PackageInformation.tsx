@@ -68,6 +68,7 @@ import PackageInfoFields from '../components/PackageInfoFields';
 import { AuthorPackageData, AuthorVersionData, PackageType, VersionStatus, getAuthorPackage } from '../scripts/author';
 import RegistryError from '../scripts/registryError';
 import { getBestUnits } from '../scripts/displayUtil';
+import { Line } from 'react-chartjs-2';
 
 class PackageInformation extends Component {
 
@@ -116,7 +117,7 @@ class PackageInformation extends Component {
       currentPackageData.versions.sort((a, b) => {
 
         // Flipping a and b reverses the sort
-        return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
+        return b.packageVersion.toFloat().cmp(a.packageVersion.toFloat() as Big).valueOf() as number;
       });
 
       this.setState({
@@ -267,7 +268,7 @@ class PackageInformation extends Component {
         <div className='subrow-top-right'>
           <button
             className='primary-button'
-            onClick={() => window.location.href = `/packages/details?packageId=${this.state.currentPackageData?.packageId}&packageVersion=${version.version}&referrer=package_info`}
+            onClick={() => window.location.href = `/packages/details?packageId=${this.state.currentPackageData?.packageId}&packageVersion=${version.packageVersion}&referrer=package_info`}
           >Details</button>
         </div>
       </div>
@@ -298,7 +299,7 @@ class PackageInformation extends Component {
       const tableConfig: TableProps<AuthorVersionData> = {
         columns: {
           Version: 25,
-          Installs: 15,
+          Downloads: 15,
           Public: 7,
           Stored: 7,
           Status: 20,
@@ -313,8 +314,8 @@ class PackageInformation extends Component {
         for (const version of this.state.currentPackageData.versions) {
 
           tableConfig.data.push([
-            version.version.toString(),
-            version.installs.toString(),
+            version.packageVersion.toString(),
+            version.downloads.toString(),
             version.isPublic ? 'Yes' : 'No',
             version.isStored ? 'Yes' : 'No',
             getStatusTextShort(version.status),
@@ -333,6 +334,11 @@ class PackageInformation extends Component {
             backButtonURL='/packages'
           >
             <>
+              <PackageInfoFields
+                packageId={this.state.currentPackageData?.packageId as string}
+                packageName={this.state.currentPackageData?.packageName as string}
+                packageType={this.state.currentPackageData?.packageType as PackageType}
+              />
               <Formik
                 validate={this._validateDescription.bind(this)}
                 validateOnChange
@@ -364,11 +370,6 @@ class PackageInformation extends Component {
                         onSubmit={handleSubmit}
                         onChange={handleChange}
                       >
-                        <PackageInfoFields
-                          packageId={this.state.currentPackageData?.packageId as string}
-                          packageName={this.state.currentPackageData?.packageName as string}
-                          packageType={this.state.currentPackageData?.packageType as PackageType}
-                        />
                         <section className='mt-9'>
                           <InputArea {...descTextAreaData} />
                         </section>
@@ -412,7 +413,7 @@ class PackageInformation extends Component {
       case VersionStatus.Processed:
         return (
           <>
-            <p>Installs: <b>{version.installs}</b></p>
+            <p>Downloads: <b>{version.downloads}</b></p>
             <p>Checksum: <b>{version.hash?.toUpperCase()}</b></p>
             <p>Uploaded: <b>{version.uploadDate.toLocaleString()}</b></p>
             <p>Package Size: <b>{getBestUnits(version.size)} ({version.size} bytes)</b></p>

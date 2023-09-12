@@ -138,12 +138,12 @@ class Upload extends Component {
       packageData.versions.sort((a, b) => {
 
         // Flipping a and b reverses the sort
-        return b.version.toFloat().cmp(a.version.toFloat() as Big).valueOf() as number;
+        return b.packageVersion.toFloat().cmp(a.packageVersion.toFloat() as Big).valueOf() as number;
       });
 
       // Increment the last version as the default version
       if (packageData.versions.length) {
-        const lastVersion = packageData.versions[0].version;
+        const lastVersion = packageData.versions[0].packageVersion;
 
         if (lastVersion.isPreRelease) {
           const preReleaseNum = lastVersion.preReleaseNum;

@@ -32,6 +32,7 @@
  * @property {string} [popupTitle] If defined, the title to display in the popup.
  * @property {string} [popupText] If defined, the text to display in the popup.
  * @property {() => void} [popupAction] If defined, the action to perform after closing the popup. Only run once, then reset.
+ * @property {TimeChartData} [downloadsData] The data for the downloads chart (the current period).
  */
 type DetailsState = {
   isLoading: boolean;
@@ -49,6 +50,7 @@ type DetailsState = {
   popupTitle?: string;
   popupText?: string;
   popupAction?: () => void;
+  downloadsData?: TimeChartData[];
 };
 
 import { Component, ReactNode } from 'react';
@@ -63,7 +65,6 @@ import MainContainerError from '../components/Main Container/MainContainerError'
 import PackageInfoFields from '../components/PackageInfoFields';
 import PackageList, { PackageListProps } from '../components/PackageList';
 import '../css/Details.scss';
-import { getBestUnits } from '../scripts/displayUtil';
 import InputFile, { InputFileProps } from '../components/Input/InputFile';
 import LoadingBarPopup from '../components/LoadingBarPopup';
 import axios, { AxiosError } from 'axios';
@@ -73,6 +74,32 @@ import { AuthorSingleVersionPackageData, PackageType, VersionStatus, getAuthorPa
 import RegistryError from '../scripts/registryError';
 import VersionSelection from '../scripts/versionSelection';
 import PackageInformation from './PackageInformation';
+import {getAnalytics, AnalyticsData, TimeChartData, formatAnalyticsDataToDays } from '../scripts/analytics';
+import { Line }  from 'react-chartjs-2';
+import { DateTime, Duration } from 'luxon';
+import 'chartjs-adapter-luxon';
+import {
+  Chart as ChartJS,
+  LinearScale,
+  LineElement,
+  Title,
+  PointElement,
+  Legend,
+  Filler,
+  TimeScale,
+} from 'chart.js';
+
+ChartJS.register(
+  LinearScale,
+  LineElement,
+  Title,
+  PointElement,
+  Legend,
+  Filler,
+  TimeScale,
+);
+
+const DOWNLOADS_CHART_COLOR = '#1f222a';
 
 class Details extends Component {
   
@@ -85,6 +112,9 @@ class Details extends Component {
 
   private _backURL?: string;
   private _backText?: string;
+
+  private _minDate: DateTime;
+  private _maxDate: DateTime;
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -100,6 +130,9 @@ class Details extends Component {
       xpSelectionStr: '*',
       xpSelection: new VersionSelection('*')
     };
+
+    this._maxDate = DateTime.now().startOf('day');
+    this._minDate = this._maxDate.minus(Duration.fromObject({ weeks: 2 }));
 
     const token = tokenStorage.checkAuth();
     if (!token) {
@@ -147,7 +180,15 @@ class Details extends Component {
     }
 
     try {
-      this._data = await getAuthorPackageVersion(packageId, version);
+      let analytics: AnalyticsData[];
+      let lastAnalyticsData: AnalyticsData[];
+      [this._data, analytics, lastAnalyticsData] = await Promise.all([
+        getAuthorPackageVersion(packageId, version),
+        getAnalytics(packageId, version, this._minDate),
+        getAnalytics(packageId, version, this._minDate.minus({weeks: 2}), this._minDate)
+      ]);
+
+      lastAnalyticsData.forEach(d => d.timestamp = d.timestamp.plus({weeks: 2}));
       
       this._originalSelection = this._data.versionData.xpSelection.toString();
       this._originalIncompatibilities = JSON.stringify(this._data.versionData.incompatibilities);
@@ -156,7 +197,8 @@ class Details extends Component {
         isLoading: false,
         dependencies: this._data.versionData.dependencies,
         incompatibilities: this._data.versionData.incompatibilities,
-        xpSelectionStr: this._data?.versionData.xpSelection.toString()
+        xpSelectionStr: this._data?.versionData.xpSelection.toString(),
+        downloadsData: formatAnalyticsDataToDays(analytics, this._minDate, this._maxDate),
       } as Partial<DetailsState>);
     } catch (e) {
       console.error(e);
@@ -188,46 +230,6 @@ class Details extends Component {
     }
   }
 
-  private _getMetaText(): JSX.Element {
-    switch (this._data?.versionData.status) {
-    case VersionStatus.Processing:
-      return (<p>This package is still processing. Check again later.</p>);
-    case VersionStatus.Processed:
-      return (
-        <>
-          <p>Installs: <b>{this._data.versionData.installs}</b></p>
-          <p>Checksum: <b>{this._data.versionData.hash}</b></p>
-          <p>Uploaded: <b>{this._data.versionData.uploadDate.toLocaleString()}</b></p>
-          <p>Package Size: <b>{getBestUnits(this._data.versionData.size)} ({this._data.versionData.size} bytes)</b></p>
-          <p>Installed Size: <b>{getBestUnits(this._data.versionData.installedSize)} ({this._data.versionData.installedSize} bytes)</b></p>
-        </>
-      );
-    case VersionStatus.Removed:
-      return (<p>This version has been removed from the registry. Please contact support.</p>);
-    case VersionStatus.Aborted:
-      return (<p>Processing of this version was aborted. There may have been a server error, or your package took too long to process. Please try again.</p>);
-    case VersionStatus.FailedFileTooLarge:
-      return (<p>The uploaded zip can not grow to be more than 16 GiB in size.</p>);
-    case VersionStatus.FailedInvalidFileTypes:
-      if (this._data?.packageType === PackageType.Executable)
-        return (<p>The uploaded zip file may not contain symbolic links.</p>);
-      else
-        return (<p>The uploaded zip file may not contain symbolic links or executables.</p>);
-    case VersionStatus.FailedMACOSX:
-      return (<p>You only have a __MACOSX directory in your uploaded zip. Ensure your directory structure is correct, and then try again.</p>);
-    case VersionStatus.FailedManifestExists:
-      return (<p>You can not have a file named <b>manifest.json</b> in your zip file root.</p>);
-    case VersionStatus.FailedNoFileDir:
-      return (<p>No directory was present with the package id <b>{this._data.packageId}</b>. Ensure your directory structure is correct, and then try again.</p>);
-    case VersionStatus.FailedNotEnoughSpace:
-      return (<p>You do not own enough storage space to store the package file. Purchase more storage space in order to upload more packages or versions.</p>);
-    case VersionStatus.FailedServer:
-      return (<p>There was a server error packaging the file.</p>);
-    default:
-      return (<p style={{ color: 'red' }}>Invalid meta text invocation. Version status: <b>{ this._data?.versionData.status }</b>. This may be a bug.</p>);
-    }
-  }
-
   // The reupload didn't fail, make a reupload request for a package processing job that failed
   private async _reuploadFailed(): Promise<void> {
     this.setState({
@@ -239,7 +241,7 @@ class Details extends Component {
 
     const formData = new FormData();
     formData.append('packageId', this._data?.packageId as string);
-    formData.append('packageVersion', this._data!.versionData.version.toString());
+    formData.append('packageVersion', this._data!.versionData.packageVersion.toString());
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formData.append('file', (document.getElementById('package-file') as any).files[0]);
@@ -353,7 +355,7 @@ class Details extends Component {
     try {
       response = await httpRequest(`${window.REGISTRY_URL}/packages/xpselection`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
         packageId: this._data?.packageId as string,
-        packageVersion: this._data?.versionData.version.toString(),
+        packageVersion: this._data?.versionData.packageVersion.toString(),
         xpSelection: this.state.xpSelection.toString()
       });
     } catch (e) {
@@ -462,7 +464,7 @@ class Details extends Component {
     try {
       response = await httpRequest(`${window.REGISTRY_URL}/packages/incompatibilities`, HTTPMethod.PATCH, tokenStorage.checkAuth() as string, {
         packageId: this._data?.packageId as string,
-        packageVersion: this._data?.versionData.version.toString(),
+        packageVersion: this._data?.versionData.packageVersion.toString(),
         incompatibilities
       });
     } catch (e) {
@@ -632,8 +634,9 @@ class Details extends Component {
                   packageId={this._data.packageId}
                   packageName={this._data?.packageName as string}
                   packageType={this._data?.packageType as PackageType}
-                  packageVersion={this._data.versionData.version.toString()}
+                  packageVersion={this._data.versionData.packageVersion.toString()}
                 />
+                
                 <section className='mt-7'>
                   <div id='version-meta'>
                     {PackageInformation.getVersionInfoText(this._data.packageId, this._data.packageType, this._data.versionData)}
@@ -642,11 +645,11 @@ class Details extends Component {
                         this._data.versionData.isStored && this._data.versionData.status === VersionStatus.Processed &&
                       <>
                         <button
-                          onClick={() => downloadFile(this._data?.versionData.loc as string, `${this._data?.packageId}@${this._data?.versionData.version}`)}
+                          onClick={() => downloadFile(this._data?.versionData.loc as string, `${this._data?.packageId}@${this._data?.versionData.packageVersion}`)}
                           className='primary-button'
                         >Download Package File</button>
                         <button
-                          onClick={() => downloadInstallationFile(this._data!.packageId, this._data!.versionData.version.toString()!, this._data?.versionData.privateKey)}
+                          onClick={() => downloadInstallationFile(this._data!.packageId, this._data!.versionData.packageVersion.toString()!, this._data?.versionData.privateKey)}
                           className='primary-button'
                         >Download Installation File</button>
                       </>
@@ -654,6 +657,40 @@ class Details extends Component {
                     </aside>
                   </div>
                 </section>
+                {this._data.versionData.status === VersionStatus.Processed && <section className='mt-7 h-18'>
+                  <Line datasetIdKey='downloads-data'
+                    options={{
+                      maintainAspectRatio: false,
+                      elements: {
+                        point: {
+                          radius: 0,
+                        }
+                      },
+                      scales: {
+                        x: {
+                          type: 'time',
+                          min: this._minDate.valueOf(),
+                          max: this._maxDate.valueOf(),
+                          time: {
+                            minUnit: 'day',
+                          }
+                        },
+                        y: {
+                          min: 0
+                        }
+                      }
+                    }}
+                    data={{
+                      datasets: [{
+                        data: this.state.downloadsData,
+                        borderColor: DOWNLOADS_CHART_COLOR,
+                        backgroundColor: DOWNLOADS_CHART_COLOR + '90',
+                        label: 'Downloads Over the past 2 Weeks',
+                        fill: true
+                      }]
+                    }}
+                  />
+                </section>}
                 {this._reuploadSection()}
                 <section className='mt-7 no-border'>
                   <div className='left-half'>

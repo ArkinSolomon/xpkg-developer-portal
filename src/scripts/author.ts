@@ -90,7 +90,7 @@ export type AuthorPackageData = {
  * All of the data that the version owner can see when requesting their version data, after it has been parsed.
  * 
  * @typedef {Object} AuthorVersionData
- * @property {Version} version The version that this data is for.
+ * @property {Version} packageVersion The version that this data is for.
  * @property {boolean} isPublic True if the package is public.
  * @property {boolean} isStored True if the package is stored.
  * @property {number} installs The number of total installations of the package.
@@ -106,10 +106,10 @@ export type AuthorPackageData = {
  * @property {string} [loc] The location of the processed file. Only present if this version was successfully processed and if the version is public.
  */
 export type AuthorVersionData = {
-  version: Version;
+  packageVersion: Version;
   isPublic: boolean;
   isStored: boolean;
-  installs: number;
+  downloads: number;
   status: VersionStatus;
   dependencies: [string, string][];
   incompatibilities: [string, string][];
@@ -131,8 +131,8 @@ export type AuthorSingleVersionPackageData = Omit<AuthorPackageData, 'versions'>
 type RegistryPackageData = Omit<AuthorPackageData, 'versions'> & {
   versions: RegistryVersionData[];
 }
-type RegistryVersionData = Omit<Omit<Omit<AuthorVersionData, 'version'>, 'xpSelection'>, 'uploadDate'> & {
-  version: string;
+type RegistryVersionData = Omit<Omit<Omit<AuthorVersionData, 'packageVersion'>, 'xpSelection'>, 'uploadDate'> & {
+  packageVersion: string;
   xpSelection: string;
   uploadDate: string;
 };
@@ -192,7 +192,7 @@ export async function getAllAuthorPackages(): Promise<AuthorPackageData[]> {
       ...v,
       uploadDate: new Date(v.uploadDate),
       xpSelection: new VersionSelection(v.xpSelection),
-      version: Version.fromString(v.version)!
+      packageVersion: Version.fromString(v.packageVersion)!
     }));
 
     retData.push({
@@ -222,7 +222,7 @@ export async function getAuthorPackage(packageId: string): Promise<AuthorPackage
   const responseData = JSON.parse(response.responseText) as RegistryPackageData;
   const versions: AuthorVersionData[] = responseData.versions.map(v => ({
     ...v,
-    version: Version.fromString(v.version)!,
+    packageVersion: Version.fromString(v.packageVersion)!,
     xpSelection: new VersionSelection(v.xpSelection),
     uploadDate: new Date(v.uploadDate)
   }));
@@ -253,7 +253,7 @@ export async function getAuthorPackageVersion(packageId: string, packageVersion:
   const responseData = JSON.parse(response.responseText) as RegistrySinglePackageData;
   const versionData: AuthorVersionData = {
     ...responseData.versionData,
-    version: Version.fromString(responseData.versionData.version)!,
+    packageVersion: Version.fromString(responseData.versionData.packageVersion)!,
     uploadDate: new Date(responseData.versionData.uploadDate),
     xpSelection: new VersionSelection(responseData.versionData.xpSelection)
   };
