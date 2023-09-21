@@ -23,6 +23,9 @@
  * @property {boolean} isPublic True if this version is public.
  * @property {boolean} isPrivate True if this version is private
  * @property {boolean} isStored True if this version is stored.
+ * @property {boolean} macOS True if this version supports MacOS.
+ * @property {boolean} windows True if this version supports Windows.
+ * @property {boolean} linux True if this version supports Linux.
  */
 type UploadValues = {
   packageId: string;
@@ -31,6 +34,9 @@ type UploadValues = {
   isPublic: boolean;
   isPrivate: boolean;
   isStored: boolean;
+  macOS: boolean;
+  windows: boolean;
+  linux: boolean;
 }
 
 /**
@@ -43,6 +49,7 @@ type UploadValues = {
  * @property {boolean} isUploading True if we are currently uploading data to the server, and if the loading bar popup should be up.
  * @property {number} uploadProgress The progress of the upload, a number from 0 to 1, where 0 is 0% and 1 is 100%.
  * @property {string} [uploadError] Any error that was returned from the server during upload (human-readable).
+ * @property {boolean} uploadErrorEffectsButton True if the upload button is affected by the {@code uploadError}.
  * @property {Partial<UploadValues>} errors Any errors with the form.
  * @property {[string, string][]} dependencies The dependencies of the new version being uploaded. An array of tuples where the first value is the id of the package that this version depends on, and the second value is the selection string of the dependency. 
  * @property {[string, string][]} incompatibilities The incompatibilities of the new version being uploaded. An array of tuples where the first value is the id of the package that this version is incompatible with, and the second value is the selection string of the incompatibility.
@@ -56,6 +63,7 @@ type UploadState = {
   isUploading: boolean;
   uploadProgress: number;
   uploadError?: string;
+  uploadErrorEffectsButton: boolean;
   errors: Partial<UploadValues>;
   file?: File;
   dependencies: [string, string][];
@@ -84,7 +92,7 @@ import axios, { AxiosError } from 'axios';
 import SelectionChecker from '../scripts/versionSelection';
 import PackageInfoFields from '../components/PackageInfoFields';
 import '../css/Upload.scss';
-import { AuthorPackageData, PackageType, getAuthorPackage } from '../scripts/author';
+import { AuthorPackageData, AuthorVersionData, PackageType, getAuthorPackage } from '../scripts/author';
 import RegistryError from '../scripts/registryError';
 import VersionSelection from '../scripts/versionSelection';
 
@@ -93,8 +101,14 @@ class Upload extends Component {
   state: UploadState;
 
   private _packageId?: string;
+
   private _defaultVersion = '1.0.0';
   private _defaultXpSelection = new VersionSelection('*');
+  private _defaultPlatformSupport: AuthorVersionData['platforms'] = {
+    macOS: true,
+    windows: true,
+    linux: true
+  };
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -103,6 +117,7 @@ class Upload extends Component {
       isLoading: true,
       isUploading: false,
       uploadProgress: 0,
+      uploadErrorEffectsButton: true,
       errors: {},
       dependencies: [],
       incompatibilities: [],
@@ -160,11 +175,12 @@ class Upload extends Component {
         const lastVersionData = packageData.versions[0];
         this._defaultXpSelection = lastVersionData.xpSelection;
 
+        this._defaultPlatformSupport = lastVersionData.platforms;
+
+        // Create deep copies
         defaultDependencies = JSON.parse(JSON.stringify(lastVersionData.dependencies)),
         defaultIncompatibilities = JSON.parse(JSON.stringify(lastVersionData.incompatibilities)); 
-   
       }
-
       
       this.setState({
         errorMessage: void (0),
@@ -219,7 +235,9 @@ class Upload extends Component {
       errors.xplaneSelection = 'Version selection invalid';
     
     this.setState({
-      errors
+      errors,
+      uploadError: void 0,
+      uploadErrorEffectsButton: true,
     } as Partial<UploadState>);
 
     return {};
@@ -234,7 +252,7 @@ class Upload extends Component {
                 
     const packageVersion = values.packageVersion.trim().toLowerCase(); 
     const xplaneSelection = values.xplaneSelection.trim().toLowerCase();
-    const { isPublic, isPrivate, isStored } = values;
+    const { isPublic, isPrivate, isStored, macOS, windows, linux } = values;
 
     const formData = new FormData();
     formData.append('packageId', this.state.packageData?.packageId as string);
@@ -245,6 +263,9 @@ class Upload extends Component {
     formData.append('isStored', isStored ? 'true' : 'false');
     formData.append('dependencies', JSON.stringify(this.state.dependencies));
     formData.append('incompatibilities', JSON.stringify(this.state.incompatibilities));
+    formData.append('supportsMacOS', macOS ? 'true' : 'false');
+    formData.append('supportsWindows', windows ? 'true' : 'false');
+    formData.append('supportsLinux', linux ? 'true' : 'false');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formData.append('file', (document.getElementById('package-file') as any).files[0]);
@@ -267,20 +288,24 @@ class Upload extends Component {
       window.location.href = '/packages';
     } catch (e) {
       let errorMessage = 'An unknown error occured.';
-      
+      let shouldAutoEnable = true;
+
       if (e instanceof AxiosError) {
         switch (e.response?.status) {
-        case 400:
+        case 400: 
+          shouldAutoEnable = false;
           errorMessage = {
             missing_form_data: 'Missing form data.',
             no_version: 'A version must be provided.',
             long_version: 'The version provided is too long.',
             invalid_version: 'The version provided is invalid',
-            version_exists: 'The version provided already exists.'
+            version_exists: 'The version provided already exists.',
+            plat_supp: 'You are required to support at least one platform.'
           }[e.response?.data as string]
               ?? `An unknown error occured [${e.response?.data}].`;
           break;
         case 403:
+          shouldAutoEnable = false;
           errorMessage = `You do not own the package ${this.state.packageData?.packageId as string}.`;
           break;
         case 500:
@@ -289,9 +314,20 @@ class Upload extends Component {
         }
       }
 
+      if (shouldAutoEnable) {
+        setTimeout(() => {
+          if (this.state.uploadError && this.state.uploadErrorEffectsButton) {
+            this.setState({
+              uploadErrorEffectsButton: false
+            });
+          }
+        }, 5000);
+      }
+
       this.setState({
         uploadError: errorMessage,
-        isUploading: false
+        isUploading: false,
+        uploadErrorEffectsButton: true
       } as Partial<UploadState>);
     } finally {
       setSubmitting(false);
@@ -350,7 +386,8 @@ class Upload extends Component {
                   xplaneSelection: this._defaultXpSelection.toString(),
                   isPublic: true,
                   isPrivate: false,
-                  isStored: true
+                  isStored: true,
+                  ...this._defaultPlatformSupport
                 } as UploadValues}
                 onSubmit={ this._submit.bind(this) }>
                 {({
@@ -363,7 +400,7 @@ class Upload extends Component {
                   const packageVersionProps: InputFieldProps = {
                     classes: ['w-10/12'],
                     name: 'packageVersion',
-                    label: parsedVersion ? `Package Version (${parsedVersion.toString()})`: 'Package Version',
+                    label: parsedVersion ? `Package Version (${parsedVersion.toString()})` : 'Package Version',
                     placeholder: 'x.x.x',
                     defaultValue: this._defaultVersion,
                     minLength: 1,
@@ -448,9 +485,9 @@ class Upload extends Component {
                             <InputField {...xpCompatiblityFieldProps} />
                           </div>
 
-                          <div className='right-half access-config'>
-                            <label className='access-config-label'>Access Configuration</label>
-                            <div className="checkboxes">
+                          <div className='right-half triple-config'>
+                            <label className='triple-config-label'>Access Configuration</label>
+                            <div className='checkboxes'>
                               <InputCheckbox name='isPublic' title='Public' onChange={e => {
                                 v.isPublic = !v.isPublic;
                                 handleChange(e);
@@ -466,6 +503,12 @@ class Upload extends Component {
                                 handleChange(e);
                                 checkboxUpdated(v);
                               }} checked={values.isStored} disabled={values.isPublic} />
+                            </div>
+                            <label className='triple-config-label mt-6'>Platform Support</label>
+                            <div className='checkboxes'>
+                              <InputCheckbox name='macOS' title='MacOS' onChange={handleChange} checked={values.macOS} />
+                              <InputCheckbox name='windows' title='Windows' onChange={handleChange} checked={values.windows} />
+                              <InputCheckbox name='linux' title='Linux' onChange={handleChange} checked={values.linux} />
                             </div>
                           </div>  
                         </section>
@@ -483,7 +526,7 @@ class Upload extends Component {
                             className='primary-button float-right'
                             type='submit'
                             value='Upload'
-                            disabled={this.state.isUploading || !!Object.keys(this.state.errors).length || !!this.state.uploadError || !this.state.file || this.state.dependencyErr || this.state.incompatibilityErr}
+                            disabled={this.state.isUploading || !!Object.keys(this.state.errors).length || (this.state.uploadErrorEffectsButton && !!this.state.uploadError) || !this.state.file || this.state.dependencyErr || this.state.incompatibilityErr}
                           />
                         </section>
                       </form>

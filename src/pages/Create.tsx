@@ -195,7 +195,7 @@ class Create extends Component {
       } else {
         const { token } = JSON.parse(resp.response);
         tokenStorage.saveToken(token, values.rememberMe);
-
+        
         const possibleRedir = sessionStorage.getItem('post-auth-redirect');
         if (possibleRedir) {
           sessionStorage.removeItem('post-auth-redirect');

@@ -13,35 +13,36 @@
  * either express or implied limitations under the License.
  */
 
+import Cookies from 'js-cookie';
+import { DateTime } from 'luxon';
+
+const COOKIE_NAME = 'xpkg_tok';
+
 /**
  * Check if we have a token in session storage or localstorage.
  * 
  * @return {string | null} The token if the token exists, or null if it doesn't exist.
  */
 export function checkAuth(): string | null {
-  let token = localStorage.getItem('token');
-  if (!token)
-    token = sessionStorage.getItem('token');
-  return token;
+  return Cookies.get(COOKIE_NAME) ?? null;
 }
 
 /**
- * Set the token.
- * 
- * @param {string} token The token we received from the server.
- * @param {boolean} save True if we should save the token in local storage rather than session storage.
+ * Save a token as a cookie.
+ *  
+ * @param {string} token The token to save.
+ * @param {boolean} rememberMe True if the cookie should not be a session cookie.
  */
-export function saveToken(token: string, save: boolean): void {
-  let storage: Storage = sessionStorage;
-  if (save)
-    storage = localStorage;
-  storage.setItem('token', token);
+export function saveToken(token: string, rememberMe: boolean): void {
+  Cookies.set(COOKIE_NAME, token, {
+    // secure: true, // Make sure this is true in production
+    expires: rememberMe ? DateTime.now().plus({ hours: 6 }).toJSDate() : void 0,
+  });
 }
 
 /**
  * Delete any stored token, or do nothing if none exists.
  */
 export function delToken(): void {
-  localStorage.removeItem('token');
-  sessionStorage.removeItem('token');
+  Cookies.remove(COOKIE_NAME);
 }

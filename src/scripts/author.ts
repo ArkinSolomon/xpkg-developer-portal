@@ -104,6 +104,10 @@ export type AuthorPackageData = {
  * @property {string} [privateKey] The private key of the package. Only provided if the package is not public.
  * @property {string} [hash] The checksum of the processed file. Only present if this version was processed successfully.
  * @property {string} [loc] The location of the processed file. Only present if this version was successfully processed and if the version is public.
+ * @property {Object} platforms The platform that the package version supports.
+ * @property {boolean} platforms.macOS True if MacOS is supported.
+ * @property {boolean} platforms.windows True if Windows is supported.
+ * @property {boolean} platforms.linux True if Linux is supported.
  */
 export type AuthorVersionData = {
   packageVersion: Version;
@@ -120,6 +124,11 @@ export type AuthorVersionData = {
   privateKey?: string;
   hash?: string;
   loc?: string;
+  platforms: {
+    macOS: boolean;
+    windows: boolean;
+    linux: boolean;
+  }
 };
 
 // When only one version is retrieved, the 'versions' key is replaced with 'versionData', and contains only the data for one version.

@@ -141,6 +141,7 @@ class Packages extends Component {
     };
 
     const token = tokenStorage.checkAuth();
+    
     if (!token) {
       tokenStorage.delToken();
       sessionStorage.setItem('post-auth-redirect', '/packages');
