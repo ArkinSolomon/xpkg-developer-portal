@@ -4,13 +4,6 @@
   "private": true,
   "description": "Where X-Pkg package creators upload their packages",
   "dependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/grecaptcha": "^3.0.4",
-    "@types/js-cookie": "^3.0.3",
-    "@types/react": "^18.0.25",
-    "@types/react-dom": "^18.0.8",
     "axios": "^1.3.2",
     "big.js": "^6.2.1",
     "bun-types": "^1.0.1",
@@ -20,7 +13,6 @@
     "date-fns": "^2.30.0",
     "formik": "^2.2.9",
     "http-method-enum": "^1.0.0",
-    "i": "^0.3.7",
     "jquery": "^3.6.1",
     "js-cookie": "^3.0.5",
     "luxon": "^3.4.3",
@@ -34,7 +26,6 @@
     "react-scripts": "5.0.1",
     "reactjs-popup": "^2.0.5",
     "sass": "^1.56.0",
-    "typescript": "^4.8.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -72,6 +63,11 @@
     "@typescript-eslint/parser": "^5.42.0",
     "eslint": "^8.26.0",
     "eslint-plugin-react": "^7.31.10",
-    "tailwindcss": "^3.2.4"
+    "tailwindcss": "^3.2.4",
+    "@types/grecaptcha": "^3.0.4",
+    "@types/js-cookie": "^3.0.3",
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "typescript": "^4.8.4"
   }
 }

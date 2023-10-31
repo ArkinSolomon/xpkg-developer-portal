@@ -16,9 +16,10 @@ import './css/reset.css';
 import './css/tailwind.css';
 import './css/index.scss';
 
-import Header from './components/Header';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+import Header from './components/Header';
+import Footer from './components/Footer';
 import Login from './pages/Login';
 import Create from './pages/Create';
 import Packages from './pages/Packages';
@@ -27,7 +28,6 @@ import NotFound from './pages/NotFound';
 import Support from './pages/Support';
 import Account from './pages/Account';
 import PackageInformation from './pages/PackageInformation';
-import Footer from './components/Footer';
 import Tools from './pages/Tools';
 import Verify from './pages/Verify';
 import Upload from './pages/Upload';
